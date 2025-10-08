@@ -699,7 +699,7 @@ func resourceRecoveryServicesVaultDelete(d *pluginsdk.ResourceData, meta interfa
 		}
 	}
 
-	if _, err = client.Delete(ctx, *id); err != nil {
+	if err = client.DeleteThenPoll(ctx, *id); err != nil {
 		return fmt.Errorf("deleting %s: %+v", id.String(), err)
 	}
 
