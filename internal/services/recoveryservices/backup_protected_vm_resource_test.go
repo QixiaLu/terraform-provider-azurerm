@@ -473,7 +473,7 @@ resource "azurerm_recovery_services_vault" "test" {
   resource_group_name = azurerm_resource_group.test.name
   sku                 = "Standard"
 
-  soft_delete_enabled = false
+  soft_delete_enabled = true
 }
 
 resource "azurerm_backup_policy_vm" "test" {
@@ -623,7 +623,7 @@ resource "azurerm_recovery_services_vault" "test" {
 
   immutability = "Unlocked"
 
-  soft_delete_enabled = false
+  soft_delete_enabled = true
 }
 
 resource "azurerm_backup_policy_vm" "test" {
@@ -767,7 +767,7 @@ resource "azurerm_recovery_services_vault" "test" {
   resource_group_name = azurerm_resource_group.test.name
   sku                 = "Standard"
 
-  soft_delete_enabled = false
+  soft_delete_enabled = true
 }
 
 resource "azurerm_backup_policy_vm" "test" {
@@ -848,7 +848,7 @@ resource "azurerm_recovery_services_vault" "test" {
   resource_group_name = azurerm_resource_group.test.name
   sku                 = "Standard"
 
-  soft_delete_enabled = false
+  soft_delete_enabled = true
 }
 
 resource "azurerm_backup_policy_vm" "test" {
@@ -1190,7 +1190,7 @@ resource "azurerm_recovery_services_vault" "test2" {
   resource_group_name = azurerm_resource_group.test2.name
   sku                 = "Standard"
 
-  soft_delete_enabled = false
+  soft_delete_enabled = true
 }
 
 resource "azurerm_backup_policy_vm" "test2" {
@@ -1486,7 +1486,7 @@ resource "azurerm_recovery_services_vault" "test" {
   resource_group_name = azurerm_resource_group.test.name
   sku                 = "Standard"
 
-  soft_delete_enabled = false
+  soft_delete_enabled = true
   immutability        = "Unlocked"
 }
 
