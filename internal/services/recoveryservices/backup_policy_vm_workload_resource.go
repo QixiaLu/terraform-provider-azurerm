@@ -408,6 +408,11 @@ func (r BackupProtectionPolicyVMWorkloadResource) Arguments() map[string]*plugin
 				string(protectionpolicies.WorkloadTypeSAPHanaDatabase),
 			}, false),
 		},
+
+		"new_property": {
+			Type:	  pluginsdk.TypeString,
+			Optional: true,
+		},
 	}
 }
 
@@ -417,7 +422,7 @@ func (r BackupProtectionPolicyVMWorkloadResource) Attributes() map[string]*plugi
 
 func (r BackupProtectionPolicyVMWorkloadResource) Create() sdk.ResourceFunc {
 	return sdk.ResourceFunc{
-		Timeout: 30 * time.Minute,
+		Timeout: 60 * time.Minute,
 		Func: func(ctx context.Context, metadata sdk.ResourceMetaData) error {
 			var model BackupProtectionPolicyVMWorkloadModel
 			if err := metadata.Decode(&model); err != nil {
