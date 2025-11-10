@@ -88,3 +88,12 @@ func (d *Document) Parse(fs afero.Fs) error {
 
 	return nil
 }
+
+// GetContent returns the full document content as a string
+func (d *Document) GetContent() string {
+	docContent := make([]string, 0)
+	for _, section := range d.Sections {
+		docContent = append(docContent, section.GetContent()...)
+	}
+	return strings.Join(docContent, "\n")
+}
