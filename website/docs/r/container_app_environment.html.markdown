@@ -67,7 +67,7 @@ The following arguments are supported:
 
 ~> **Note:** required if `logs_destination` is set to `log-analytics`. Cannot be set if `logs_destination` is set to `azure-monitor`.
 
-* `logs_destination` - (Optional) Where the application logs will be saved for this Container Apps Managed Environment. Possible values include `log-analytics` and `azure-monitor`. Omitting this value will result in logs being streamed only.
+* `logs_destination` - (Optional) Where the application logs will be saved for this Container Apps Managed Environment. Possible values include `log-analytics` and `azure-monitor`. Omitting this value will result in logs being streamed only. Defaults to `""`.
 
 * `mutual_tls_enabled` - (Optional) Should mutual transport layer security (mTLS) be enabled? Defaults to `false`.
 
@@ -95,9 +95,9 @@ A `workload_profile` block supports the following:
 
 ~> **Note:** Defining a `Consumption` profile is optional, however, Environments created without an initial Workload Profile cannot have them added at a later time and must be recreated. Similarly, an environment created with Profiles must always have at least one defined Profile, removing all profiles will force a recreation of the resource.
 
-* `maximum_count` - (Required) The maximum number of instances of workload profile that can be deployed in the Container App Environment.
+* `maximum_count` - (Optional) The maximum number of instances of workload profile that can be deployed in the Container App Environment.
 
-* `minimum_count` - (Required) The minimum number of instances of workload profile that can be deployed in the Container App Environment.
+* `minimum_count` - (Optional) The minimum number of instances of workload profile that can be deployed in the Container App Environment.
 
 ---
 

@@ -79,11 +79,11 @@ The following arguments are supported:
 
 * `administrator_username` - (Optional) The administrator username of the MongoDB Cluster. Changing this forces a new resource to be created.
 
-* `create_mode` - (Optional) The creation mode for the MongoDB Cluster. Possibles values are `Default` and `GeoReplica`. Defaults to `Default`. Changing this forces a new resource to be created.
+* `create_mode` - (Optional) The creation mode for the MongoDB Cluster. Possibles values are `Default` and `GeoReplica`. Defaults to `Default`.
 
 * `preview_features` - (Optional) The preview features that can be enabled on the MongoDB Cluster. Changing this forces a new resource to be created.
 
-* `shard_count` -  (Optional) The Number of shards to provision on the MongoDB Cluster. Changing this forces a new resource to be created.
+* `shard_count` - (Optional) The Number of shards to provision on the MongoDB Cluster. Changing this forces a new resource to be created.
 
 * `source_location` - (Optional) The location of the source MongoDB Cluster. Changing this forces a new resource to be created.
 

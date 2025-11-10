@@ -177,7 +177,7 @@ In addition to the Arguments listed above - the following Attributes are exporte
 
 * `dataplane_api_endpoint` - The dataplane API endpoint of the NGINX Deployment.
 
-* `web_application_firewall.status` - A `web_application_firewall.status` block as defined below:
+* `web_application_firewall.status` - A `web_application_firewall.status` block as defined below:.
 
 ---
 
