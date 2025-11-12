@@ -73,7 +73,7 @@ func resourceRecoveryServicesVault() *pluginsdk.Resource {
 					Schema: map[string]*pluginsdk.Schema{
 						"key_id": {
 							Type:         pluginsdk.TypeString,
-							Required:     true,
+							Optional:     true,
 							ValidateFunc: keyvaultValidate.NestedItemIdWithOptionalVersion,
 						},
 						"infrastructure_encryption_enabled": {
@@ -87,7 +87,7 @@ func resourceRecoveryServicesVault() *pluginsdk.Resource {
 						},
 						"user_assigned_identity_id": {
 							Type:         pluginsdk.TypeString,
-							Optional:     true,
+							Required:     true,
 							ValidateFunc: commonids.ValidateUserAssignedIdentityID,
 						},
 					},
@@ -99,7 +99,7 @@ func resourceRecoveryServicesVault() *pluginsdk.Resource {
 			"public_network_access_enabled": {
 				Type:     pluginsdk.TypeBool,
 				Optional: true,
-				Default:  true,
+				Default:  false,
 			},
 
 			// set `immutability` to Computed, because it will start to return from the service once it has been set.
@@ -111,6 +111,7 @@ func resourceRecoveryServicesVault() *pluginsdk.Resource {
 					string(vaults.ImmutabilityStateLocked),
 					string(vaults.ImmutabilityStateUnlocked),
 					string(vaults.ImmutabilityStateDisabled),
+					"New Possible Values",
 				}, false),
 			},
 
@@ -172,7 +173,6 @@ func resourceRecoveryServicesVault() *pluginsdk.Resource {
 			"classic_vmware_replication_enabled": {
 				Type:     pluginsdk.TypeBool,
 				Optional: true,
-				ForceNew: true,
 			},
 		},
 
