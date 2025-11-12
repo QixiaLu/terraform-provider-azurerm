@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-provider-azurerm/internal/provider"
 	"github.com/hashicorp/terraform-provider-azurerm/internal/sdk"
 	"github.com/hashicorp/terraform-provider-azurerm/internal/tools/document-fmt/markdown"
+	"github.com/hashicorp/terraform-provider-azurerm/internal/tools/document-fmt/parser"
 	"github.com/hashicorp/terraform-provider-azurerm/internal/tools/document-fmt/util"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/afero"
@@ -260,142 +261,90 @@ func (rd *TerraformNodeData) populateDocumentProperties() {
 		}
 	}
 
-	// TODO: move this somewhere else?
-	propertyRegex := regexp.MustCompile(`^[-*]\s*\x60([a-z0-9_]*)\x60`)
-	blockPropertyRegex := regexp.MustCompile(`^(?i).*[ \t]*\x60(\w*)\x60[ \t]*blocks?.*(?:below|above)`)
-	blockSectionRegex := regexp.MustCompile(`^(?i)[\w \t]*\x60(\w*)\x60[ \t]*block[ \t]*(?:supports|exports|contains)`)
-
-	// TODO: consider reworking this? e.g. Gather all blocks then try to map them afterwards
-	for _, section := range []*markdown.Section{argumentsSection, attributesSection} {
-		if section == nil {
-			continue
-		}
-
-		// TODO: do differently ot avoid having to deref
-		section := *section
-
-		props := NewProperties()
-
-		var lastProperty *Property
-		var lastBlockArgumentName string
-		var parsingBlockSection bool
-
-		parentlessProps := NewProperties() // tracks blocks for which we've not found a parent yet, e.g. in cases where a block is defined before the parent arg
-		fmt.Printf("Processing %s `%s`\n", rd.Type, rd.Name)
-		for _, line := range section.GetContent() {
-			switch {
-			case blockSectionRegex.MatchString(line):
-				parsingBlockSection = true
-
-				matches := blockSectionRegex.FindStringSubmatch(line)
-				if len(matches) != 2 {
-					// TODO: err/debug?
-					continue
-				}
-				lastBlockArgumentName = matches[1]
-			case propertyRegex.MatchString(line):
-				matches := propertyRegex.FindStringSubmatch(line)
-				if len(matches) != 2 {
-					// TODO: debug log msg
-					continue
-				}
-
-				name := matches[1]
-				// TODO: func
-				isBlock := blockPropertyRegex.MatchString(line)
-
-				prop := Property{
-					Name:  name,
-					Count: 1,
-					Block: isBlock,
-				}
-
-				if parsingBlockSection {
-					addPropToParent(lastBlockArgumentName, props, &prop, 0)
-					continue
-				}
-
-				if props == nil { // shouldn't be possible but just in case
-					panic("should probably add some error handling ¯\\_(ツ)_/¯")
-				}
-
-				if existingArg, ok := props.Objects[name]; ok {
-					// if already encountered arg, it may be a duplicate, increment count and let a rule deal with it
-					// TODO: when skipping, we may end up with unintentional additionallines on a prop, e.g. an extra ""
-					// how to handle?
-					existingArg.Count++
-					continue
-				}
-
-				if isBlock {
-					prop.Nested = NewProperties()
-				}
-
-				props.Names = append(props.Names, name)
-				props.Objects[name] = &prop
-				lastProperty = &prop
-			case line == "---": // TODO: Is there a better way to track end of block?
-				parsingBlockSection = false
-				// lastParentArgument = nil
-				// lastProperty = nil
-			default:
-				// default to appending unmatched lines to additional for arg
-				if lastProperty != nil { // do we care about excluding `---`?
-					lastProperty.AdditionalLines = append(lastProperty.AdditionalLines, line)
-				}
+	if argumentsSection != nil {
+		if argSection, ok := (*argumentsSection).(*markdown.ArgumentsSection); ok {
+			if parsedProps, err := argSection.ParseFields(); err == nil && parsedProps != nil {
+				rd.DocumentArguments = convertParsedPropertiesToProperties(parsedProps)
 			}
 		}
+	}
 
-		// For any props that weren't matched yet, try to match
-		// TODO: do we need to do this multiple times? confirm ¯\_(ツ)_/¯
-		lastProperty = nil
-		for name, props2 := range parentlessProps.Objects {
-			addPropToParent(name, props, props2, 0)
-		}
-
-		switch section.(type) {
-		case *markdown.ArgumentsSection:
-			rd.DocumentArguments = props
-		case *markdown.AttributesSection:
-			rd.DocumentAttributes = props
+	if attributesSection != nil {
+		if attrSection, ok := (*attributesSection).(*markdown.AttributesSection); ok {
+			if parsedProps, err := attrSection.ParseFields(); err == nil && parsedProps != nil {
+				rd.DocumentAttributes = convertParsedPropertiesToProperties(parsedProps)
+			}
 		}
 	}
 }
 
-// TODO: fix stackoverflow panic better, ideally we don't exit based on an arbitrarily set level int
-// happening (in one instance) because the `azurerm_dynatrace_monitor` data source has a block named `plan` and within that block is a property named `plan`
-func addPropToParent(parentName string, props *Properties, propToAdd *Property, level int) {
-	// hacky way to avoid stackoverflow error, TODO: find a better way
-	// 10 because having that many nested blocks is absurd and not expected
-	if level > 10 {
-		return
+// convertParsedPropertiesToProperties converts parser types to data types
+func convertParsedPropertiesToProperties(parsed *parser.ParsedProperties) *Properties {
+	if parsed == nil {
+		return nil
 	}
 
-	if props == nil {
-		// TODO err
-		return
-	}
-
-	if prop, ok := props.Objects[parentName]; ok {
-		if prop.Nested == nil {
-			prop.Nested = NewProperties() // init if nil
+	result := NewProperties()
+	for _, name := range parsed.Names {
+		if parsedProp, exists := parsed.Objects[name]; exists {
+			result.Names = append(result.Names, name)
+			result.Objects[name] = convertParsedPropertyToProperty(parsedProp)
 		}
+	}
+	return result
+}
 
-		prop.Nested.Names = append(prop.Nested.Names, propToAdd.Name)
-		prop.Nested.Objects[propToAdd.Name] = propToAdd
-		// we don't break here, there may be properties in a block that belong to multiple parents
-		// e.g. azurerm_function_app_slot.site_config.ip_restriction.headers.* && azurerm_function_app_slot.site_config.scm_ip_restriction.headers.*
+// convertParsedPropertyToProperty converts parser.ParsedProperty to data.Property
+func convertParsedPropertyToProperty(parsed *parser.ParsedProperty) *Property {
+	if parsed == nil {
+		return nil
 	}
 
-	for _, prop := range props.Objects {
-		// TODO: consider adding the condition back in, currently unreliable due to the is block regex not matching all block prop definitions
-		// A nested argument can only exist in other blocks, skip everything else
-		// if prop.Block {
-		addPropToParent(parentName, prop.Nested, propToAdd, level+1)
-		//}
+	prop := &Property{
+		Name:        parsed.Name,
+		Type:        parsed.Type,
+		Description: parsed.Description,
+		Required:    parsed.Required,
+		Optional:    parsed.Optional,
+		Computed:    parsed.Computed,
+		ForceNew:    parsed.ForceNew,
+		Deprecated:  parsed.Deprecated,
+
+		PossibleValues: make([]string, len(parsed.PossibleValues)),
+		DefaultValue:   parsed.DefaultValue,
+
+		Block:           parsed.Block,
+		BlockHasSection: parsed.BlockHasSection,
+
+		// Enhanced fields from parser - no type conversion needed now!
+		Path:           parsed.Path,
+		Line:           parsed.Line,
+		Position:       parsed.Position,       // Same type now - types.PositionType
+		RequiredStatus: parsed.RequiredStatus, // Same type now - types.RequiredType
+		Content:        parsed.Content,
+		EnumStart:      parsed.EnumStart,
+		EnumEnd:        parsed.EnumEnd,
+		ParseErrors:    make([]string, len(parsed.ParseErrors)),
+		BlockTypeName:  parsed.BlockTypeName,
+		GuessEnums:     make([]string, len(parsed.GuessEnums)),
 	}
 
-	return
+	// Copy slices
+	copy(prop.PossibleValues, parsed.PossibleValues)
+	copy(prop.ParseErrors, parsed.ParseErrors)
+	copy(prop.GuessEnums, parsed.GuessEnums)
+
+	// Convert nested properties
+	if parsed.Nested != nil {
+		prop.Nested = convertParsedPropertiesToProperties(parsed.Nested)
+	}
+
+	// Convert same name attr reference
+	if parsed.SameNameAttr != nil {
+		prop.SameNameAttr = convertParsedPropertyToProperty(parsed.SameNameAttr)
+	}
+
+	return prop
 }
 
 func populateAllSchemaProperties(properties *Properties, resource *schema.Resource) {
