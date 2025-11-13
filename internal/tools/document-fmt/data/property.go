@@ -89,6 +89,18 @@ func (props *Properties) AddProperty(p *Property) {
 		return
 	}
 
+	// Check if property already exists (duplicate detection)
+	if existing, exists := props.Objects[p.Name]; exists {
+		// Property exists in same section - increment count and track as duplicate
+		existing.Count++
+		// Store parse error for duplicate detection
+		if existing.ParseErrors == nil {
+			existing.ParseErrors = []string{}
+		}
+		existing.ParseErrors = append(existing.ParseErrors, "duplicate field in same section")
+		return
+	}
+
 	props.Names = append(props.Names, p.Name)
 	props.Objects[p.Name] = p
 }
@@ -261,4 +273,61 @@ func (p *Property) HasCircularReference(visited map[string]bool) bool {
 		}
 	}
 	return false
+}
+
+// BuildBlockStructure links block-type fields to their block definitions
+// This is equivalent to document-lint's buildStruct() function
+func (props *Properties) BuildBlockStructure() {
+	if props == nil {
+		return
+	}
+
+	// Collect all block definitions (properties with Block=true and non-empty Nested)
+	blockDefinitions := make(map[string]*Property)
+	for name, prop := range props.Objects {
+		if prop.Block && prop.Nested != nil && len(prop.Nested.Objects) > 0 {
+			// This is a block definition section
+			blockDefinitions[name] = prop
+			// Also try with BlockTypeName if different
+			if prop.BlockTypeName != "" && prop.BlockTypeName != name {
+				blockDefinitions[prop.BlockTypeName] = prop
+			}
+		}
+	}
+
+	// Recursive function to link block fields
+	var fillBlockFields func(prop *Property, parentPath string)
+	fillBlockFields = func(prop *Property, parentPath string) {
+		if prop.Block && (prop.Nested == nil || len(prop.Nested.Objects) == 0) {
+			// This is a block-type field that needs to be linked to its definition
+			blockName := prop.BlockTypeName
+			if blockName == "" {
+				blockName = prop.Name
+			}
+
+			// Look for the block definition
+			if blockDef, exists := blockDefinitions[blockName]; exists {
+				// Link the block definition's properties to this field
+				if blockDef.Nested != nil {
+					prop.Nested = blockDef.Nested
+				}
+			}
+		}
+
+		// Recursively process nested properties
+		if prop.Nested != nil {
+			for _, nested := range prop.Nested.Objects {
+				nestedPath := prop.Name
+				if parentPath != "" {
+					nestedPath = parentPath + "." + prop.Name
+				}
+				fillBlockFields(nested, nestedPath)
+			}
+		}
+	}
+
+	// Process all top-level properties
+	for _, prop := range props.Objects {
+		fillBlockFields(prop, "")
+	}
 }
