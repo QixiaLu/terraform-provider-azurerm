@@ -32,7 +32,6 @@ func (s *ArgumentsSection) GetHeading() Heading {
 
 func (s *ArgumentsSection) SetContent(content []string) {
 	s.content = content
-	// Clear cached parsed fields when content changes
 	s.parsedFields = nil
 }
 
@@ -51,32 +50,41 @@ func (s *ArgumentsSection) ParseFields() (*parser.ParsedProperties, error) {
 	var currentBlock *parser.ParsedProperty
 	var inBlock bool
 
+	// TODO: lineNum is wrong here, it counts from the arg body
 	for lineNum, line := range s.content {
-		line = strings.TrimSpace(line)
+		trimmedLine := strings.TrimSpace(line)
 
 		// Skip empty lines and comments
-		if line == "" || strings.HasPrefix(line, "<!--") {
+		if trimmedLine == "" || strings.HasPrefix(trimmedLine, "<!--") {
+			continue
+		}
+
+		// Skip notes
+		// TODO: probably add it to the previous feilds' contents?
+		if strings.HasPrefix(trimmedLine, "->") || strings.HasPrefix(trimmedLine, "~>") {
 			continue
 		}
 
 		// Check if this is a block definition line
-		if parser.IsBlockHead(line) {
+		if parser.IsBlockHead(trimmedLine) {
 			// Finish previous block if any
 			if inBlock && currentBlock != nil {
 				properties.AddProperty(currentBlock)
 			}
 
 			// Start new block
-			blockNames, blockOf := parser.ProcessBlockDefinition(line, parser.PosArgs, lineNum)
+			blockNames, blockOf := parser.ProcessBlockDefinition(trimmedLine, parser.PosArgs, lineNum)
 			if len(blockNames) > 0 {
 				currentBlock = &parser.ParsedProperty{
-					Name:          blockNames[0],
-					Block:         true,
-					BlockTypeName: blockNames[0],
-					Position:      parser.PosArgs,
-					Line:          lineNum,
-					Content:       line,
-					Nested:        parser.NewParsedProperties(),
+					ParsedField: parser.ParsedField{
+						Name:          blockNames[0],
+						Block:         true,
+						BlockTypeName: blockNames[0],
+						Position:      parser.PosArgs,
+						Line:          lineNum,
+						Content:       line,
+					},
+					Nested: parser.NewParsedProperties(),
 				}
 
 				// Handle "block of" relationships
@@ -90,7 +98,7 @@ func (s *ArgumentsSection) ParseFields() (*parser.ParsedProperties, error) {
 		}
 
 		// Check for block section separator
-		if line == "---" {
+		if trimmedLine == "---" {
 			if inBlock && currentBlock != nil {
 				properties.AddProperty(currentBlock)
 				currentBlock = nil
@@ -100,16 +108,16 @@ func (s *ArgumentsSection) ParseFields() (*parser.ParsedProperties, error) {
 		}
 
 		// Check if this is a field line (starts with * or -)
-		if strings.HasPrefix(line, "*") || strings.HasPrefix(line, "-") {
+		if strings.HasPrefix(trimmedLine, "*") || strings.HasPrefix(trimmedLine, "-") {
 			// Extract field using parser logic
-			field := parser.ExtractFieldFromLine(line, parser.PosArgs, lineNum)
+			field := parser.ExtractFieldFromLine(trimmedLine, parser.PosArgs, lineNum)
 			if field != nil && field.Name != "" {
 				if inBlock && currentBlock != nil {
 					// Add to current block
-					currentBlock.Nested.AddProperty(field)
+					currentBlock.Nested.AddField(field)
 				} else {
 					// Add as top-level property
-					properties.AddProperty(field)
+					properties.AddField(field)
 				}
 			}
 		}

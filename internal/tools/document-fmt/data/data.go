@@ -5,7 +5,6 @@ package data
 
 import (
 	"fmt"
-	"regexp"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -250,14 +249,12 @@ func (rd *TerraformNodeData) populateSchemaProperties() {
 }
 
 func (rd *TerraformNodeData) populateDocumentProperties() {
-	var argumentsSection, attributesSection *markdown.Section
+	var argumentsSection *markdown.Section
 
 	for _, s := range rd.Document.Sections {
 		switch s.(type) {
 		case *markdown.ArgumentsSection:
 			argumentsSection = &s
-		case *markdown.AttributesSection:
-			attributesSection = &s
 		}
 	}
 
@@ -265,17 +262,17 @@ func (rd *TerraformNodeData) populateDocumentProperties() {
 		if argSection, ok := (*argumentsSection).(*markdown.ArgumentsSection); ok {
 			if parsedProps, err := argSection.ParseFields(); err == nil && parsedProps != nil {
 				rd.DocumentArguments = convertParsedPropertiesToProperties(parsedProps)
+				// Link block-type fields to their block definitions
+				rd.DocumentArguments.BuildBlockStructure()
 			}
 		}
 	}
 
-	if attributesSection != nil {
-		if attrSection, ok := (*attributesSection).(*markdown.AttributesSection); ok {
-			if parsedProps, err := attrSection.ParseFields(); err == nil && parsedProps != nil {
-				rd.DocumentAttributes = convertParsedPropertiesToProperties(parsedProps)
-			}
-		}
-	}
+	// TODO: complete attributes
+	// if attributesSection != nil {
+	// 	if attrSection, ok := (*attributesSection).(*markdown.AttributesSection); ok {
+	// 	}
+	// }
 }
 
 // convertParsedPropertiesToProperties converts parser types to data types
