@@ -6,7 +6,6 @@ import (
 	"github.com/hashicorp/terraform-provider-azurerm/internal/tools/document-fmt/types"
 )
 
-// Type aliases for convenience - no more duplication!
 type (
 	PositionType = types.PositionType
 	RequiredType = types.RequiredType
@@ -21,11 +20,6 @@ const (
 	PosTimeout = types.PosTimeout
 	PosImport  = types.PosImport
 	PosOther   = types.PosOther
-
-	RequiredDefault  = types.RequiredDefault
-	RequiredOptional = types.RequiredOptional
-	RequiredRequired = types.RequiredRequired
-	RequiredComputed = types.RequiredComputed
 )
 
 type Properties struct {
@@ -52,18 +46,16 @@ type Property struct {
 	Block           bool
 	BlockHasSection bool // TODO?
 
-	// List or map related attributes (existing)
+	// List or map related attributes
 	NestedType string
 
-	// Documentation related attributes (existing)
+	// Documentation related attributes
 	AdditionalLines []string // Tracks any lines from docs beyond initial property, e.g. notes
 	Count           int      // Property count, for doc parsing to detect duplicate entries
 
-	// Enhanced fields from document-lint integration
 	Path           string       // xpath-like path (a.b.c)
 	Line           int          // source line number in documentation
 	Position       PositionType // Arguments, Attributes, Timeouts etc.
-	RequiredStatus RequiredType // Required/Optional/Computed status from parsing
 	Content        string       // original markdown line content
 	EnumStart      int          // start position of enum values in content
 	EnumEnd        int          // end position of enum values in content
@@ -80,7 +72,7 @@ func NewProperties() *Properties {
 	}
 }
 
-// AddProperty adds a property to the collection (equivalent to document-lint's AddField)
+// AddProperty adds a property to the collection
 func (props *Properties) AddProperty(p *Property) {
 	if props == nil {
 		return
@@ -89,6 +81,7 @@ func (props *Properties) AddProperty(p *Property) {
 		return
 	}
 
+	// TODO: Fix this, for block, there should already be a link, which is not duplication
 	// Check if property already exists (duplicate detection)
 	if existing, exists := props.Objects[p.Name]; exists {
 		// Property exists in same section - increment count and track as duplicate
@@ -105,7 +98,7 @@ func (props *Properties) AddProperty(p *Property) {
 	props.Objects[p.Name] = p
 }
 
-// FindProperty searches for a property by name recursively (equivalent to document-lint's FindField)
+// FindProperty searches for a property by name recursively
 func (props *Properties) FindProperty(name string) *Property {
 	if props == nil {
 		return nil
@@ -119,7 +112,7 @@ func (props *Properties) FindProperty(name string) *Property {
 	return nil
 }
 
-// FindAllSubBlocks finds all sub-blocks with the given name (equivalent to document-lint's FindAllSubBlock)
+// FindAllSubBlocks finds all sub-blocks with the given name
 func (props *Properties) FindAllSubBlocks(name string) []*Property {
 	if props == nil {
 		return nil
@@ -153,7 +146,7 @@ func (props *Properties) HasCircularReference() string {
 	return ""
 }
 
-// Merge merges properties from another Properties collection (equivalent to document-lint's Merge)
+// Merge merges properties from another Properties collection
 func (props *Properties) Merge(other *Properties) {
 	if props == nil || other == nil {
 		return
@@ -161,7 +154,7 @@ func (props *Properties) Merge(other *Properties) {
 
 	for name, prop := range other.Objects {
 		if existing, exists := props.Objects[name]; exists {
-			// Property exists, set as same name reference (like document-lint's SameNameAttr)
+			// Property exists, set as same name reference
 			existing.SameNameAttr = prop
 		} else {
 			// Add new property
@@ -205,7 +198,7 @@ func (p *Property) SetGuessEnums(values []string) {
 	p.GuessEnums = result
 }
 
-// AddSubProperty adds a nested property (equivalent to document-lint's AddSubField)
+// AddSubProperty adds a nested property
 func (p *Property) AddSubProperty(sub *Property) {
 	if p.Nested == nil {
 		p.Nested = NewProperties()
@@ -214,7 +207,7 @@ func (p *Property) AddSubProperty(sub *Property) {
 	p.Nested.Objects[sub.Name] = sub
 }
 
-// FindProperty recursively searches for a property by name (equivalent to document-lint's MatchName)
+// FindProperty recursively searches for a property by name
 func (p *Property) FindProperty(name string) *Property {
 	if p.Name == name {
 		return p
@@ -229,7 +222,7 @@ func (p *Property) FindProperty(name string) *Property {
 	return nil
 }
 
-// FindAllSubBlocks finds all sub-blocks with the given name (equivalent to document-lint's AllSubBlock)
+// FindAllSubBlocks finds all sub-blocks with the given name
 func (p *Property) FindAllSubBlocks(name string, needBlock bool) []*Property {
 	var result []*Property
 
@@ -276,7 +269,6 @@ func (p *Property) HasCircularReference(visited map[string]bool) bool {
 }
 
 // BuildBlockStructure links block-type fields to their block definitions
-// This is equivalent to document-lint's buildStruct() function
 func (props *Properties) BuildBlockStructure() {
 	if props == nil {
 		return

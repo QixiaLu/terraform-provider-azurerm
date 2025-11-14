@@ -11,7 +11,6 @@ import (
 	"github.com/hashicorp/terraform-provider-azurerm/internal/provider"
 	"github.com/hashicorp/terraform-provider-azurerm/internal/sdk"
 	"github.com/hashicorp/terraform-provider-azurerm/internal/tools/document-fmt/markdown"
-	"github.com/hashicorp/terraform-provider-azurerm/internal/tools/document-fmt/parser"
 	"github.com/hashicorp/terraform-provider-azurerm/internal/tools/document-fmt/util"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/afero"
@@ -260,9 +259,8 @@ func (rd *TerraformNodeData) populateDocumentProperties() {
 
 	if argumentsSection != nil {
 		if argSection, ok := (*argumentsSection).(*markdown.ArgumentsSection); ok {
-			if parsedProps, err := argSection.ParseFields(); err == nil && parsedProps != nil {
-				rd.DocumentArguments = convertParsedPropertiesToProperties(parsedProps)
-				// Link block-type fields to their block definitions
+			if parsedProps, err := parseMdArgToProperties(argSection); err == nil && parsedProps != nil {
+				rd.DocumentArguments = parsedProps
 				rd.DocumentArguments.BuildBlockStructure()
 			}
 		}
@@ -275,73 +273,84 @@ func (rd *TerraformNodeData) populateDocumentProperties() {
 	// }
 }
 
-// convertParsedPropertiesToProperties converts parser types to data types
-func convertParsedPropertiesToProperties(parsed *parser.ParsedProperties) *Properties {
-	if parsed == nil {
-		return nil
-	}
+func parseMdArgToProperties(argSection *markdown.ArgumentsSection) (*Properties, error) {
+	properties := NewProperties()
+	var currentBlock *Property
+	var inBlock bool
 
-	result := NewProperties()
-	for _, name := range parsed.Names {
-		if parsedProp, exists := parsed.Objects[name]; exists {
-			result.Names = append(result.Names, name)
-			result.Objects[name] = convertParsedPropertyToProperty(parsedProp)
+	for lineNum, line := range argSection.GetContent() {
+		trimmedLine := strings.TrimSpace(line)
+
+		if trimmedLine == "" || strings.HasPrefix(trimmedLine, "<!--") {
+			continue
+		}
+
+		// Probably concat notes to the previous feilds' contents?
+		if strings.HasPrefix(trimmedLine, "->") || strings.HasPrefix(trimmedLine, "~>") || strings.HasPrefix(trimmedLine, "!>") {
+			continue
+		}
+
+		if isBlockHead(trimmedLine) {
+			// Finish previous block if any
+			if inBlock && currentBlock != nil {
+				properties.AddProperty(currentBlock)
+			}
+
+			// Start new block
+			blockNames, blockOf := processBlockDefinition(trimmedLine, PosArgs, lineNum)
+			if len(blockNames) > 0 {
+				currentBlock = &Property{
+					Name:          blockNames[0],
+					Block:         true,
+					BlockTypeName: blockNames[0],
+					Position:      PosArgs,
+					Line:          lineNum,
+					Content:       line,
+					Nested: 	   NewProperties(),
+				}
+
+				// Handle "block of" relationships
+				if blockOf != "" {
+					currentBlock.Path = blockOf + "." + currentBlock.Name
+				}
+
+				inBlock = true
+			}
+			continue
+		}
+
+		// Check for block section separator
+		if trimmedLine == "---" {
+			if inBlock && currentBlock != nil {
+				properties.AddProperty(currentBlock)
+				currentBlock = nil
+			}
+			inBlock = false
+			continue
+		}
+
+		// Check if this is a field line (starts with * or -)
+		if strings.HasPrefix(trimmedLine, "*") || strings.HasPrefix(trimmedLine, "-") {
+			// Extract field using parser logic
+			field := ExtractFieldFromLine(trimmedLine, PosArgs, lineNum)
+			if field != nil && field.Name != "" {
+				if inBlock && currentBlock != nil {
+					// Add to current block
+					currentBlock.Nested.AddProperty(field)
+				} else {
+					// Add as top-level property
+					properties.AddProperty(field)
+				}
+			}
 		}
 	}
-	return result
-}
 
-// convertParsedPropertyToProperty converts parser.ParsedProperty to data.Property
-func convertParsedPropertyToProperty(parsed *parser.ParsedProperty) *Property {
-	if parsed == nil {
-		return nil
+	// Add any remaining block
+	if inBlock && currentBlock != nil {
+		properties.AddProperty(currentBlock)
 	}
 
-	prop := &Property{
-		Name:        parsed.Name,
-		Type:        parsed.Type,
-		Description: parsed.Description,
-		Required:    parsed.Required,
-		Optional:    parsed.Optional,
-		Computed:    parsed.Computed,
-		ForceNew:    parsed.ForceNew,
-		Deprecated:  parsed.Deprecated,
-
-		PossibleValues: make([]string, len(parsed.PossibleValues)),
-		DefaultValue:   parsed.DefaultValue,
-
-		Block:           parsed.Block,
-		BlockHasSection: parsed.BlockHasSection,
-
-		// Enhanced fields from parser - no type conversion needed now!
-		Path:           parsed.Path,
-		Line:           parsed.Line,
-		Position:       parsed.Position,       // Same type now - types.PositionType
-		RequiredStatus: parsed.RequiredStatus, // Same type now - types.RequiredType
-		Content:        parsed.Content,
-		EnumStart:      parsed.EnumStart,
-		EnumEnd:        parsed.EnumEnd,
-		ParseErrors:    make([]string, len(parsed.ParseErrors)),
-		BlockTypeName:  parsed.BlockTypeName,
-		GuessEnums:     make([]string, len(parsed.GuessEnums)),
-	}
-
-	// Copy slices
-	copy(prop.PossibleValues, parsed.PossibleValues)
-	copy(prop.ParseErrors, parsed.ParseErrors)
-	copy(prop.GuessEnums, parsed.GuessEnums)
-
-	// Convert nested properties
-	if parsed.Nested != nil {
-		prop.Nested = convertParsedPropertiesToProperties(parsed.Nested)
-	}
-
-	// Convert same name attr reference
-	if parsed.SameNameAttr != nil {
-		prop.SameNameAttr = convertParsedPropertyToProperty(parsed.SameNameAttr)
-	}
-
-	return prop
+	return properties, nil
 }
 
 func populateAllSchemaProperties(properties *Properties, resource *schema.Resource) {

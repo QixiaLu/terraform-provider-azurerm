@@ -6,14 +6,11 @@ package markdown
 import (
 	"regexp"
 	"strings"
-
-	"github.com/hashicorp/terraform-provider-azurerm/internal/tools/document-fmt/parser"
 )
 
 type AttributesSection struct {
 	heading      Heading
 	content      []string
-	parsedFields *parser.ParsedProperties // cached parsed fields
 }
 
 var _ SectionWithTemplate = &AttributesSection{}
@@ -32,8 +29,6 @@ func (s *AttributesSection) GetHeading() Heading {
 
 func (s *AttributesSection) SetContent(content []string) {
 	s.content = content
-	// Clear cached parsed fields when content changes
-	s.parsedFields = nil
 }
 
 func (s *AttributesSection) GetContent() []string {
