@@ -92,9 +92,12 @@ func (s S006) checkMissingInDoc(resourceType, parentPath string, schema *data.Pr
 						IdAndName(s), fullPath, name, docProperty.Line))
 					continue
 				}
+
+				errs = append(errs, fmt.Errorf("%s: `%s` block is missing from documentation (e.g. A / An `%s` block supports the following:)"))
+				continue
 			}
 
-			// Recursively check nested properties // TODO add a check if docProperty doesnt have nested items, it means that this block is not expanded and explained
+			// Recursively check nested properties
 			if docProperty.Nested != nil {
 				errs = append(errs, s.checkMissingInDoc(resourceType, fullPath, property.Nested, docProperty.Nested)...)
 			}
