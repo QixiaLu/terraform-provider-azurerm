@@ -31,7 +31,13 @@ type TerraformNodeData struct {
 	APIs     []API     // APIs used by this resource -- best effort, may not be populated
 	Timeouts []Timeout // Timeouts from *schema.Resource
 
+	SchemaProperties *Properties
+
 	Document *markdown.Document // resource document
+	// These are separated because when it comes to the docs, we may encounter duplicate properties where one is in attributes and another in arguments
+	// E.g. `identity` blocks, expect in both args and attrs, but the nested fields should be different
+	DocumentArguments  *Properties
+	DocumentAttributes *Properties
 
 	Errors []error // errors found in this resource
 }
@@ -215,6 +221,8 @@ func (rd *TerraformNodeData) populateAdditionalFields(fs afero.Fs) {
 	rd.populateAPIData()
 	rd.populateTimeouts()
 	rd.populateDocumentData(fs)
+	rd.populateDocumentProperties()
+	rd.populateSchemaProperties()
 }
 
 func (rd *TerraformNodeData) populateAPIData() {
@@ -229,6 +237,153 @@ func (rd *TerraformNodeData) populateDocumentData(fs afero.Fs) {
 	if rd.Document.Exists {
 		if err := rd.Document.Parse(fs); err != nil {
 			rd.Errors = append(rd.Errors, fmt.Errorf("failed to parse documentation: %+v", err)) // Output error instead?
+		}
+	}
+}
+
+func (rd *TerraformNodeData) populateSchemaProperties() {
+	rd.SchemaProperties = NewProperties()
+
+	populateAllSchemaProperties(rd.SchemaProperties, rd.Resource)
+}
+
+func (rd *TerraformNodeData) populateDocumentProperties() {
+	var argumentsSection *markdown.Section
+
+	for _, s := range rd.Document.Sections {
+		switch s.(type) {
+		case *markdown.ArgumentsSection:
+			argumentsSection = &s
+		}
+	}
+
+	if argumentsSection != nil {
+		if argSection, ok := (*argumentsSection).(*markdown.ArgumentsSection); ok {
+			if parsedProps, err := parseMdArgToProperties(argSection); err == nil && parsedProps != nil {
+				rd.DocumentArguments = parsedProps
+				rd.DocumentArguments.BuildBlockStructure()
+			}
+		}
+	}
+
+	// TODO: complete attributes
+	// if attributesSection != nil {
+	// 	if attrSection, ok := (*attributesSection).(*markdown.AttributesSection); ok {
+	// 	}
+	// }
+}
+
+func parseMdArgToProperties(argSection *markdown.ArgumentsSection) (*Properties, error) {
+	properties := NewProperties()
+	var currentBlock *Property
+	var inBlock bool
+
+	for lineNum, line := range argSection.GetContent() {
+		trimmedLine := strings.TrimSpace(line)
+
+		if trimmedLine == "" || strings.HasPrefix(trimmedLine, "<!--") {
+			continue
+		}
+
+		// Probably concat notes to the previous feilds' contents?
+		if strings.HasPrefix(trimmedLine, "->") || strings.HasPrefix(trimmedLine, "~>") || strings.HasPrefix(trimmedLine, "!>") {
+			continue
+		}
+
+		if isBlockHead(trimmedLine) {
+			// Finish previous block if any
+			if inBlock && currentBlock != nil {
+				properties.AddProperty(currentBlock)
+			}
+
+			// Start new block
+			blockNames, blockOf := processBlockDefinition(trimmedLine, PosArgs, lineNum)
+			if len(blockNames) > 0 {
+				currentBlock = &Property{
+					Name:          blockNames[0],
+					Block:         true,
+					BlockTypeName: blockNames[0],
+					Position:      PosArgs,
+					Line:          lineNum,
+					Content:       line,
+					Nested: 	   NewProperties(),
+				}
+
+				// Handle "block of" relationships
+				if blockOf != "" {
+					currentBlock.Path = blockOf + "." + currentBlock.Name
+				}
+
+				inBlock = true
+			}
+			continue
+		}
+
+		// Check for block section separator
+		if trimmedLine == "---" {
+			if inBlock && currentBlock != nil {
+				properties.AddProperty(currentBlock)
+				currentBlock = nil
+			}
+			inBlock = false
+			continue
+		}
+
+		// Check if this is a field line (starts with * or -)
+		if strings.HasPrefix(trimmedLine, "*") || strings.HasPrefix(trimmedLine, "-") {
+			// Extract field using parser logic
+			field := ExtractFieldFromLine(trimmedLine, PosArgs, lineNum)
+			if field != nil && field.Name != "" {
+				if inBlock && currentBlock != nil {
+					// Add to current block
+					currentBlock.Nested.AddProperty(field)
+				} else {
+					// Add as top-level property
+					properties.AddProperty(field)
+				}
+			}
+		}
+	}
+
+	// Add any remaining block
+	if inBlock && currentBlock != nil {
+		properties.AddProperty(currentBlock)
+	}
+
+	return properties, nil
+}
+
+func populateAllSchemaProperties(properties *Properties, resource *schema.Resource) {
+	// TODO: rename prop schema
+	for name, property := range resource.Schema {
+		// TODO guard against propSchema == nil? Realistically shouldn't be possible
+		properties.Names = append(properties.Names, name) // This isn't really needed for schema, but we'll leave it in case it's useful later
+		properties.Objects[name] = &Property{
+			Name:        name,
+			Type:        strings.TrimPrefix(property.Type.String(), "Type"),
+			Description: property.Description,
+			Required:    property.Required,
+			Optional:    property.Optional,
+			Computed:    property.Computed,
+			ForceNew:    property.ForceNew,
+			Deprecated:  property.Deprecated != "",
+			// PossibleValues:  nil, // TODO
+			// DefaultValue:    nil, // TODO
+		}
+
+		if r, ok := property.Elem.(*schema.Resource); ok {
+			property := properties.Objects[name]
+
+			property.Block = true
+			// Expect nested, so init
+			// TODO: do we want to check this doesn't override existing? shouldnt be possible but just in case?
+			property.Nested = NewProperties()
+
+			populateAllSchemaProperties(property.Nested, r)
+		}
+
+		if r, ok := property.Elem.(*schema.Schema); ok {
+			properties.Objects[name].NestedType = strings.TrimPrefix(r.Type.String(), "Type")
 		}
 	}
 }

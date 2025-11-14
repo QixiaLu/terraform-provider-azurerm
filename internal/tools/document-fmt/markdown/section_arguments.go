@@ -9,8 +9,8 @@ import (
 )
 
 type ArgumentsSection struct {
-	heading Heading
-	content []string
+	heading      Heading
+	content      []string
 }
 
 var _ SectionWithTemplate = &ArgumentsSection{}
