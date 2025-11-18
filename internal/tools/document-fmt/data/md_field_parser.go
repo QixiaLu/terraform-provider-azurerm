@@ -26,11 +26,10 @@ var (
 )
 
 // ExtractFieldFromLine parses a markdown field line into a ParsedField
-func ExtractFieldFromLine(line string, position PositionType, lineNumber int) *Property {
+func ExtractFieldFromLine(line string, lineNumber int) *Property {
 	field := &Property{
 		Content:  line,
 		Line:     lineNumber,
-		Position: position,
 	}
 
 	// Extract default value and force new flag
@@ -112,7 +111,7 @@ func isBlockHead(line string) bool {
 }
 
 // processBlockDefinition processes a block definition line and returns block metadata
-func processBlockDefinition(line string, position PositionType, lineNumber int) (blockNames []string, blockOf string) {
+func processBlockDefinition(line string, lineNumber int) (blockNames []string, blockOf string) {
 	blockNames = extractBlockNames(line)
 
 	for _, sep := range []string{" of ", " within "} {

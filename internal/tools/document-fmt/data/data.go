@@ -261,7 +261,6 @@ func (rd *TerraformNodeData) populateDocumentProperties() {
 		if argSection, ok := (*argumentsSection).(*markdown.ArgumentsSection); ok {
 			if parsedProps, err := parseMdArgToProperties(argSection); err == nil && parsedProps != nil {
 				rd.DocumentArguments = parsedProps
-				rd.DocumentArguments.BuildBlockStructure()
 			}
 		}
 	}
@@ -291,22 +290,19 @@ func parseMdArgToProperties(argSection *markdown.ArgumentsSection) (*Properties,
 		}
 
 		if isBlockHead(trimmedLine) {
-			// Finish previous block if any
 			if inBlock && currentBlock != nil {
-				properties.AddProperty(currentBlock)
+				properties.AddBlockDefinition(currentBlock)
 			}
 
-			// Start new block
-			blockNames, blockOf := processBlockDefinition(trimmedLine, PosArgs, lineNum)
+			blockNames, blockOf := processBlockDefinition(trimmedLine, lineNum)
 			if len(blockNames) > 0 {
 				currentBlock = &Property{
 					Name:          blockNames[0],
 					Block:         true,
 					BlockTypeName: blockNames[0],
-					Position:      PosArgs,
 					Line:          lineNum,
 					Content:       line,
-					Nested: 	   NewProperties(),
+					Nested:        NewProperties(),
 				}
 
 				// Handle "block of" relationships
@@ -319,36 +315,33 @@ func parseMdArgToProperties(argSection *markdown.ArgumentsSection) (*Properties,
 			continue
 		}
 
-		// Check for block section separator
 		if trimmedLine == "---" {
 			if inBlock && currentBlock != nil {
-				properties.AddProperty(currentBlock)
+				properties.AddBlockDefinition(currentBlock)
 				currentBlock = nil
 			}
 			inBlock = false
 			continue
 		}
 
-		// Check if this is a field line (starts with * or -)
-		if strings.HasPrefix(trimmedLine, "*") || strings.HasPrefix(trimmedLine, "-") {
-			// Extract field using parser logic
-			field := ExtractFieldFromLine(trimmedLine, PosArgs, lineNum)
+		// Check if this is a field line (starts with * or - at line beginning, not indented)
+		if strings.HasPrefix(line, "*") || strings.HasPrefix(line, "-") {
+			field := ExtractFieldFromLine(trimmedLine, lineNum)
 			if field != nil && field.Name != "" {
 				if inBlock && currentBlock != nil {
-					// Add to current block
 					currentBlock.Nested.AddProperty(field)
 				} else {
-					// Add as top-level property
 					properties.AddProperty(field)
 				}
 			}
 		}
 	}
 
-	// Add any remaining block
 	if inBlock && currentBlock != nil {
-		properties.AddProperty(currentBlock)
+		properties.AddBlockDefinition(currentBlock)
 	}
+
+	properties.LinkBlockDefinitions()
 
 	return properties, nil
 }

@@ -2,29 +2,12 @@ package data
 
 import (
 	"strings"
-
-	"github.com/hashicorp/terraform-provider-azurerm/internal/tools/document-fmt/types"
-)
-
-type (
-	PositionType = types.PositionType
-	RequiredType = types.RequiredType
-)
-
-// Re-export constants for backward compatibility
-const (
-	PosDefault = types.PosDefault
-	PosExample = types.PosExample
-	PosArgs    = types.PosArgs
-	PosAttr    = types.PosAttr
-	PosTimeout = types.PosTimeout
-	PosImport  = types.PosImport
-	PosOther   = types.PosOther
 )
 
 type Properties struct {
-	Names   []string // Only really relevant to the documentation, could be used to track ordering in docs to compare against ordering we want
-	Objects map[string]*Property
+	Names            []string // Only really relevant to the documentation, could be used to track ordering in docs to compare against ordering we want
+	Objects          map[string]*Property
+	BlockDefinitions map[string]*Property // Separate storage for block definitions ("A `name` block supports:")
 }
 
 type Property struct {
@@ -45,6 +28,7 @@ type Property struct {
 	Nested          *Properties
 	Block           bool
 	BlockHasSection bool // TODO?
+	BlockSection    *Property
 
 	// List or map related attributes
 	NestedType string
@@ -52,23 +36,21 @@ type Property struct {
 	// Documentation related attributes
 	AdditionalLines []string // Tracks any lines from docs beyond initial property, e.g. notes
 	Count           int      // Property count, for doc parsing to detect duplicate entries
-
-	Path           string       // xpath-like path (a.b.c)
-	Line           int          // source line number in documentation
-	Position       PositionType // Arguments, Attributes, Timeouts etc.
-	Content        string       // original markdown line content
-	EnumStart      int          // start position of enum values in content
-	EnumEnd        int          // end position of enum values in content
-	ParseErrors    []string     // errors encountered during parsing
-	BlockTypeName  string       // block type name (may differ from field name)
-	SameNameAttr   *Property    // reference to same-named field in different position
-	GuessEnums     []string     // guessed enum values from code blocks
+	Path          string       // xpath-like path (a.b.c)
+	Line          int          // source line number in documentation
+	Content       string       // original markdown line content
+	EnumStart     int          // start position of enum values in content
+	EnumEnd       int          // end position of enum values in content
+	ParseErrors   []string     // errors encountered during parsing
+	BlockTypeName string       // block type name (may differ from field name)
+	GuessEnums    []string     // guessed enum values from code blocks
 }
 
 func NewProperties() *Properties {
 	return &Properties{
-		Names:   make([]string, 0),
-		Objects: make(map[string]*Property),
+		Names:            make([]string, 0),
+		Objects:          make(map[string]*Property),
+		BlockDefinitions: make(map[string]*Property),
 	}
 }
 
@@ -81,7 +63,6 @@ func (props *Properties) AddProperty(p *Property) {
 		return
 	}
 
-	// TODO: Fix this, for block, there should already be a link, which is not duplication
 	// Check if property already exists (duplicate detection)
 	if existing, exists := props.Objects[p.Name]; exists {
 		// Property exists in same section - increment count and track as duplicate
@@ -98,71 +79,75 @@ func (props *Properties) AddProperty(p *Property) {
 	props.Objects[p.Name] = p
 }
 
-// FindProperty searches for a property by name recursively
-func (props *Properties) FindProperty(name string) *Property {
+// AddBlockDefinition adds a block definition to the separate collection
+// This is used for block definition sections like "A `blob_properties` block supports:"
+func (props *Properties) AddBlockDefinition(blockDef *Property) {
 	if props == nil {
-		return nil
+		return
 	}
-
-	for _, prop := range props.Objects {
-		if result := prop.FindProperty(name); result != nil {
-			return result
-		}
-	}
-	return nil
-}
-
-// FindAllSubBlocks finds all sub-blocks with the given name
-func (props *Properties) FindAllSubBlocks(name string) []*Property {
-	if props == nil {
-		return nil
-	}
-
-	var result []*Property
-	for _, prop := range props.Objects {
-		result = append(result, prop.FindAllSubBlocks(name, true)...)
-	}
-
-	// If no blocks found, try non-block properties
-	if len(result) == 0 {
-		for _, prop := range props.Objects {
-			result = append(result, prop.FindAllSubBlocks(name, false)...)
-		}
-	}
-	return result
-}
-
-// HasCircularReference checks if there are circular references in the properties
-func (props *Properties) HasCircularReference() string {
-	if props == nil {
-		return ""
-	}
-
-	for name, prop := range props.Objects {
-		if prop.Block && prop.HasCircularReference(nil) {
-			return name
-		}
-	}
-	return ""
-}
-
-// Merge merges properties from another Properties collection
-func (props *Properties) Merge(other *Properties) {
-	if props == nil || other == nil {
+	if blockDef == nil || blockDef.Name == "" {
 		return
 	}
 
-	for name, prop := range other.Objects {
-		if existing, exists := props.Objects[name]; exists {
-			// Property exists, set as same name reference
-			existing.SameNameAttr = prop
-		} else {
-			// Add new property
-			props.Names = append(props.Names, name)
-			props.Objects[name] = prop
+	if existing, exists := props.BlockDefinitions[blockDef.Name]; exists {
+		existing.Count++
+		if existing.ParseErrors == nil {
+			existing.ParseErrors = []string{}
+		}
+		existing.ParseErrors = append(existing.ParseErrors, "duplicate block definition")
+		return
+	}
+
+	props.BlockDefinitions[blockDef.Name] = blockDef
+}
+
+// LinkBlockDefinitions links block-type fields to their definitions
+func (props *Properties) LinkBlockDefinitions() {
+	if props == nil {
+		return
+	}
+	props.linkBlockDefinitionsWithRegistry(props.BlockDefinitions)
+}
+
+// linkBlockDefinitionsWithRegistry recursively links block fields using a global block definition registry
+func (props *Properties) linkBlockDefinitionsWithRegistry(globalBlockDefs map[string]*Property) {
+	if props == nil {
+		return
+	}
+
+	for _, field := range props.Objects {
+		if field.Block {
+			// Look for corresponding block definition
+			blockName := field.BlockTypeName
+			if blockName == "" {
+				blockName = field.Name
+			}
+
+			if blockDef, exists := globalBlockDefs[blockName]; exists {
+				if blockDef.Nested != nil && len(blockDef.Nested.Objects) > 0 {
+					field.Nested = blockDef.Nested
+					field.Nested.linkBlockDefinitionsWithRegistry(globalBlockDefs)
+				}
+			} else if field.Nested == nil || len(field.Nested.Objects) == 0 {
+				if field.ParseErrors == nil {
+					field.ParseErrors = []string{}
+				}
+				field.ParseErrors = append(field.ParseErrors, "block definition not found")
+			}
+		}
+
+		if field.Nested != nil {
+			field.Nested.linkBlockDefinitionsWithRegistry(globalBlockDefs)
+		}
+	}
+
+	for _, blockDef := range props.BlockDefinitions {
+		if blockDef.Nested != nil {
+			blockDef.Nested.linkBlockDefinitionsWithRegistry(globalBlockDefs)
 		}
 	}
 }
+
 
 func (p *Property) String() string {
 	return "TODO"
@@ -196,76 +181,6 @@ func (p *Property) SetGuessEnums(values []string) {
 		}
 	}
 	p.GuessEnums = result
-}
-
-// AddSubProperty adds a nested property
-func (p *Property) AddSubProperty(sub *Property) {
-	if p.Nested == nil {
-		p.Nested = NewProperties()
-	}
-	p.Nested.Names = append(p.Nested.Names, sub.Name)
-	p.Nested.Objects[sub.Name] = sub
-}
-
-// FindProperty recursively searches for a property by name
-func (p *Property) FindProperty(name string) *Property {
-	if p.Name == name {
-		return p
-	}
-	if p.Nested != nil {
-		for _, nested := range p.Nested.Objects {
-			if result := nested.FindProperty(name); result != nil {
-				return result
-			}
-		}
-	}
-	return nil
-}
-
-// FindAllSubBlocks finds all sub-blocks with the given name
-func (p *Property) FindAllSubBlocks(name string, needBlock bool) []*Property {
-	var result []*Property
-
-	// Check if this property itself matches
-	if p.Block && p.BlockTypeName == name {
-		result = append(result, p)
-		return result
-	}
-	if !needBlock && p.BlockTypeName == "" && p.Name == name {
-		result = append(result, p)
-		return result
-	}
-
-	// Recursively search nested properties
-	if p.Nested != nil {
-		for _, nested := range p.Nested.Objects {
-			result = append(result, nested.FindAllSubBlocks(name, needBlock)...)
-		}
-	}
-	return result
-}
-
-// HasCircularReference checks if there's a circular reference in nested properties
-func (p *Property) HasCircularReference(visited map[string]bool) bool {
-	if visited == nil {
-		visited = make(map[string]bool)
-	}
-
-	if visited[p.Name] {
-		return true
-	}
-
-	if p.Block && p.Nested != nil {
-		visited[p.Name] = true
-		defer delete(visited, p.Name)
-
-		for _, nested := range p.Nested.Objects {
-			if nested.HasCircularReference(visited) {
-				return true
-			}
-		}
-	}
-	return false
 }
 
 // BuildBlockStructure links block-type fields to their block definitions
