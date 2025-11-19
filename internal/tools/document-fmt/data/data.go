@@ -249,101 +249,41 @@ func (rd *TerraformNodeData) populateSchemaProperties() {
 
 func (rd *TerraformNodeData) populateDocumentProperties() {
 	var argumentsSection *markdown.Section
+	// var attributesSection *markdown.Section
 
 	for _, s := range rd.Document.Sections {
 		switch s.(type) {
 		case *markdown.ArgumentsSection:
 			argumentsSection = &s
 		}
+		// case *markdown.AttributesSection:
+		// 	attributesSection = &s
+		// }
 	}
 
 	if argumentsSection != nil {
 		if argSection, ok := (*argumentsSection).(*markdown.ArgumentsSection); ok {
-			if parsedProps, err := parseMdArgToProperties(argSection); err == nil && parsedProps != nil {
+			if parsedProps := parseMdArgToProperties(argSection); parsedProps != nil {
 				rd.DocumentArguments = parsedProps
 			}
 		}
 	}
 
-	// TODO: complete attributes
 	// if attributesSection != nil {
 	// 	if attrSection, ok := (*attributesSection).(*markdown.AttributesSection); ok {
+	// 		if parsedProps := parseMdAttrToProperties(attrSection); parsedProps != nil {
+	// 			rd.DocumentAttributes = parsedProps
+	// 		}
 	// 	}
 	// }
 }
 
-func parseMdArgToProperties(argSection *markdown.ArgumentsSection) (*Properties, error) {
-	properties := NewProperties()
-	var currentBlock *Property
-	var inBlock bool
+func parseMdArgToProperties(argSection *markdown.ArgumentsSection) *Properties {
+	return parseMarkdownSection(argSection.GetContent())
+}
 
-	for lineNum, line := range argSection.GetContent() {
-		trimmedLine := strings.TrimSpace(line)
-
-		if trimmedLine == "" || strings.HasPrefix(trimmedLine, "<!--") {
-			continue
-		}
-
-		// Probably concat notes to the previous feilds' contents?
-		if strings.HasPrefix(trimmedLine, "->") || strings.HasPrefix(trimmedLine, "~>") || strings.HasPrefix(trimmedLine, "!>") {
-			continue
-		}
-
-		if isBlockHead(trimmedLine) {
-			if inBlock && currentBlock != nil {
-				properties.AddBlockDefinition(currentBlock)
-			}
-
-			blockNames, blockOf := processBlockDefinition(trimmedLine, lineNum)
-			if len(blockNames) > 0 {
-				currentBlock = &Property{
-					Name:          blockNames[0],
-					Block:         true,
-					BlockTypeName: blockNames[0],
-					Line:          lineNum,
-					Content:       line,
-					Nested:        NewProperties(),
-				}
-
-				// Handle "block of" relationships
-				if blockOf != "" {
-					currentBlock.Path = blockOf + "." + currentBlock.Name
-				}
-
-				inBlock = true
-			}
-			continue
-		}
-
-		if trimmedLine == "---" {
-			if inBlock && currentBlock != nil {
-				properties.AddBlockDefinition(currentBlock)
-				currentBlock = nil
-			}
-			inBlock = false
-			continue
-		}
-
-		// Check if this is a field line (starts with * or - at line beginning, not indented)
-		if strings.HasPrefix(line, "*") || strings.HasPrefix(line, "-") {
-			field := ExtractFieldFromLine(trimmedLine, lineNum)
-			if field != nil && field.Name != "" {
-				if inBlock && currentBlock != nil {
-					currentBlock.Nested.AddProperty(field)
-				} else {
-					properties.AddProperty(field)
-				}
-			}
-		}
-	}
-
-	if inBlock && currentBlock != nil {
-		properties.AddBlockDefinition(currentBlock)
-	}
-
-	properties.LinkBlockDefinitions()
-
-	return properties, nil
+func parseMdAttrToProperties(attrSection *markdown.AttributesSection) *Properties {
+	return parseMarkdownSection(attrSection.GetContent())
 }
 
 func populateAllSchemaProperties(properties *Properties, resource *schema.Resource) {
