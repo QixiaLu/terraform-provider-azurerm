@@ -126,8 +126,15 @@ func newMarkFromString(content string) *mark {
 
 	for idx, line := range lines {
 		switch {
+		case strings.HasPrefix(line, "###"):
+			result.addItem(newMarkItem(idx, line, itemHeader))
+			continue
 		case strings.HasPrefix(line, "##"):
 			result.addItem(newMarkItem(idx, line, itemHeader))
+			continue
+		case strings.HasPrefix(line, "#"):
+			result.addItem(newMarkItem(idx, line, itemHeader))
+			continue
 		case strings.HasPrefix(line, "*"):
 			result.addItem(newMarkItem(idx, line, itemField))
 		case strings.HasPrefix(line, "---"):
@@ -155,7 +162,7 @@ func newMarkFromString(content string) *mark {
 				continue
 			}
 			switch last.itemType {
-			case itemField, itemMeteInfo, itemPlainText:
+			case itemField, itemMeteInfo, itemExample, itemPlainText:
 				last.addLine(idx, line)
 			default:
 				if strings.TrimSpace(line) == "" {
