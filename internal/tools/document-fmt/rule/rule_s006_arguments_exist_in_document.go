@@ -42,16 +42,16 @@ func (s S006) Run(d *data.TerraformNodeData, fix bool) []error {
 	}
 
 	// Check for properties missing in documentation
-	errs = append(errs, s.checkMissingInDoc(d.Name, "", d.SchemaProperties, d.DocumentArguments)...)
+	errs = append(errs, s.checkMissingInDoc(d.Name, "", d.SchemaProperties, d.DocumentArguments, d.DocumentArguments.BlockDefinitions)...)
 
 	// Check for properties missing in schema (might be typos or deprecated)
-	errs = append(errs, s.checkMissingInSchema(d.Name, "", d.DocumentArguments, d.SchemaProperties)...)
+	errs = append(errs, s.checkMissingInSchema(d.Name, "", d.DocumentArguments, d.SchemaProperties, d.DocumentArguments.BlockDefinitions)...)
 
 	return errs
 }
 
 // checkMissingInDoc checks if schema properties are missing from documentation
-func (s S006) checkMissingInDoc(resourceType, parentPath string, schema *models.Properties, documentation *models.Properties) []error {
+func (s S006) checkMissingInDoc(resourceType, parentPath string, schema *models.Properties, documentation *models.Properties, blockDefinitions map[string]*models.Property) []error {
 	errs := make([]error, 0)
 
 	if schema == nil {
@@ -91,12 +91,21 @@ func (s S006) checkMissingInDoc(resourceType, parentPath string, schema *models.
 
 		// Check for block type declarations
 		if property.Nested != nil && len(property.Nested.Objects) > 0 {
+			// Check if the field is marked as a block in documentation
+			if !docProperty.Block {
+				errs = append(errs, fmt.Errorf("%s: argument `%s` should be declared as a block (e.g., 'One or more `%s` block as defined below')",
+					IdAndName(s), fullPath, name))
+				continue
+			}
+
 			if docProperty.Nested == nil || len(docProperty.Nested.Objects) == 0 {
-				// Check if the field is marked as a block in documentation
-				if !docProperty.Block {
-					errs = append(errs, fmt.Errorf("%s: argument `%s` should be declared as a block (e.g., 'One or more `%s` block as defined below')",
-						IdAndName(s), fullPath, name))
-					continue
+				// For some blocks sharing same sub-fields, they are defined in a shared and non-existed block section. e.g. azurerm_role_management_policy -> notification_target
+				if docProperty.BlockTypeName != docProperty.Name {
+					linkedDocProperty := blockDefinitions[docProperty.BlockTypeName]
+					if linkedDocProperty != nil && linkedDocProperty.Nested != nil && len(linkedDocProperty.Nested.Objects) > 0 {
+						errs = append(errs, s.checkMissingInDoc(resourceType, fullPath, property.Nested, linkedDocProperty.Nested, blockDefinitions)...)
+						continue
+					}
 				}
 
 				errs = append(errs, fmt.Errorf("%s: `%s` block is missing from documentation (e.g. A / An `%s` block supports the following:)",
@@ -106,7 +115,7 @@ func (s S006) checkMissingInDoc(resourceType, parentPath string, schema *models.
 
 			// Recursively check nested properties
 			if docProperty.Nested != nil {
-				errs = append(errs, s.checkMissingInDoc(resourceType, fullPath, property.Nested, docProperty.Nested)...)
+				errs = append(errs, s.checkMissingInDoc(resourceType, fullPath, property.Nested, docProperty.Nested, blockDefinitions)...)
 			}
 		}
 	}
@@ -115,7 +124,7 @@ func (s S006) checkMissingInDoc(resourceType, parentPath string, schema *models.
 }
 
 // checkMissingInSchema checks if documented properties are missing from schema
-func (s S006) checkMissingInSchema(resourceType, parentPath string, documentation *models.Properties, schema *models.Properties) []error {
+func (s S006) checkMissingInSchema(resourceType, parentPath string, documentation *models.Properties, schema *models.Properties, blockDefinitions map[string]*models.Property) []error {
 	errs := make([]error, 0)
 
 	if documentation == nil {
@@ -172,7 +181,7 @@ func (s S006) checkMissingInSchema(resourceType, parentPath string, documentatio
 
 		if docProperty.Nested != nil && len(docProperty.Nested.Objects) > 0 {
 			if schemaProperty.Nested != nil {
-				errs = append(errs, s.checkMissingInSchema(resourceType, fullPath, docProperty.Nested, schemaProperty.Nested)...)
+				errs = append(errs, s.checkMissingInSchema(resourceType, fullPath, docProperty.Nested, schemaProperty.Nested, blockDefinitions)...)
 			}
 		}
 	}
