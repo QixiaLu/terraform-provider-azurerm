@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-provider-azurerm/internal/tools/document-fmt/data"
+	"github.com/hashicorp/terraform-provider-azurerm/internal/tools/document-fmt/data/models"
 )
 
 type S006 struct{}
@@ -50,7 +51,7 @@ func (s S006) Run(d *data.TerraformNodeData, fix bool) []error {
 }
 
 // checkMissingInDoc checks if schema properties are missing from documentation
-func (s S006) checkMissingInDoc(resourceType, parentPath string, schema *data.Properties, documentation *data.Properties) []error {
+func (s S006) checkMissingInDoc(resourceType, parentPath string, schema *models.Properties, documentation *models.Properties) []error {
 	errs := make([]error, 0)
 
 	if schema == nil {
@@ -114,7 +115,7 @@ func (s S006) checkMissingInDoc(resourceType, parentPath string, schema *data.Pr
 }
 
 // checkMissingInSchema checks if documented properties are missing from schema
-func (s S006) checkMissingInSchema(resourceType, parentPath string, documentation *data.Properties, schema *data.Properties) []error {
+func (s S006) checkMissingInSchema(resourceType, parentPath string, documentation *models.Properties, schema *models.Properties) []error {
 	errs := make([]error, 0)
 
 	if documentation == nil {

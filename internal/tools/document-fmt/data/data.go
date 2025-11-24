@@ -10,6 +10,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-provider-azurerm/internal/provider"
 	"github.com/hashicorp/terraform-provider-azurerm/internal/sdk"
+	"github.com/hashicorp/terraform-provider-azurerm/internal/tools/document-fmt/data/mdparser"
+	"github.com/hashicorp/terraform-provider-azurerm/internal/tools/document-fmt/data/models"
 	"github.com/hashicorp/terraform-provider-azurerm/internal/tools/document-fmt/markdown"
 	"github.com/hashicorp/terraform-provider-azurerm/internal/tools/document-fmt/util"
 	log "github.com/sirupsen/logrus"
@@ -31,13 +33,13 @@ type TerraformNodeData struct {
 	APIs     []API     // APIs used by this resource -- best effort, may not be populated
 	Timeouts []Timeout // Timeouts from *schema.Resource
 
-	SchemaProperties *Properties
+	SchemaProperties *models.Properties
 
 	Document *markdown.Document // resource document
 	// These are separated because when it comes to the docs, we may encounter duplicate properties where one is in attributes and another in arguments
 	// E.g. `identity` blocks, expect in both args and attrs, but the nested fields should be different
-	DocumentArguments  *Properties
-	DocumentAttributes *Properties
+	DocumentArguments  *models.Properties
+	DocumentAttributes *models.Properties
 
 	Errors []error // errors found in this resource
 }
@@ -242,7 +244,7 @@ func (rd *TerraformNodeData) populateDocumentData(fs afero.Fs) {
 }
 
 func (rd *TerraformNodeData) populateSchemaProperties() {
-	rd.SchemaProperties = NewProperties()
+	rd.SchemaProperties = models.NewProperties()
 
 	populateAllSchemaProperties(rd.SchemaProperties, rd.Resource)
 }
@@ -278,20 +280,20 @@ func (rd *TerraformNodeData) populateDocumentProperties() {
 	// }
 }
 
-func parseMdArgToProperties(argSection *markdown.ArgumentsSection) *Properties {
-	return parseMarkdownSection(argSection.GetContent())
+func parseMdArgToProperties(argSection *markdown.ArgumentsSection) *models.Properties {
+	return mdparser.ParseMarkdownSection(argSection.GetContent())
 }
 
-func parseMdAttrToProperties(attrSection *markdown.AttributesSection) *Properties {
-	return parseMarkdownSection(attrSection.GetContent())
+func parseMdAttrToProperties(attrSection *markdown.AttributesSection) *models.Properties {
+	return mdparser.ParseMarkdownSection(attrSection.GetContent())
 }
 
-func populateAllSchemaProperties(properties *Properties, resource *schema.Resource) {
+func populateAllSchemaProperties(properties *models.Properties, resource *schema.Resource) {
 	// TODO: rename prop schema
 	for name, property := range resource.Schema {
 		// TODO guard against propSchema == nil? Realistically shouldn't be possible
 		properties.Names = append(properties.Names, name) // This isn't really needed for schema, but we'll leave it in case it's useful later
-		properties.Objects[name] = &Property{
+		properties.Objects[name] = &models.Property{
 			Name:        name,
 			Type:        strings.TrimPrefix(property.Type.String(), "Type"),
 			Description: property.Description,
@@ -310,7 +312,7 @@ func populateAllSchemaProperties(properties *Properties, resource *schema.Resour
 			property.Block = true
 			// Expect nested, so init
 			// TODO: do we want to check this doesn't override existing? shouldnt be possible but just in case?
-			property.Nested = NewProperties()
+			property.Nested = models.NewProperties()
 
 			populateAllSchemaProperties(property.Nested, r)
 		}
