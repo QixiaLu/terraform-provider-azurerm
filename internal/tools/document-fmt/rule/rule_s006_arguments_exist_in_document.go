@@ -6,6 +6,7 @@ import (
 
 	"github.com/hashicorp/terraform-provider-azurerm/internal/tools/document-fmt/data"
 	"github.com/hashicorp/terraform-provider-azurerm/internal/tools/document-fmt/data/models"
+	"github.com/hashicorp/terraform-provider-azurerm/internal/tools/document-fmt/util"
 )
 
 type S006 struct{}
@@ -51,10 +52,11 @@ func (s S006) Run(d *data.TerraformNodeData, fix bool) []error {
 }
 
 // checkMissingInDoc checks if schema properties are missing from documentation
-func (s S006) checkMissingInDoc(resourceType, parentPath string, schema *models.Properties, documentation *models.Properties, blockDefinitions map[string]*models.Property) []error {
+func (s S006) checkMissingInDoc(resourceType, parentPath string, schema *models.SchemaProperties, documentation *models.DocumentProperties, blockDefinitions map[string]*models.DocumentProperty) []error {
 	errs := make([]error, 0)
 
 	if schema == nil {
+
 		return errs
 	}
 
@@ -124,7 +126,7 @@ func (s S006) checkMissingInDoc(resourceType, parentPath string, schema *models.
 }
 
 // checkMissingInSchema checks if documented properties are missing from schema
-func (s S006) checkMissingInSchema(resourceType, parentPath string, documentation *models.Properties, schema *models.Properties, blockDefinitions map[string]*models.Property) []error {
+func (s S006) checkMissingInSchema(resourceType, parentPath string, documentation *models.DocumentProperties, schema *models.SchemaProperties, blockDefinitions map[string]*models.DocumentProperty) []error {
 	errs := make([]error, 0)
 
 	if documentation == nil {
@@ -147,13 +149,21 @@ func (s S006) checkMissingInSchema(resourceType, parentPath string, documentatio
 			continue
 		}
 
-		// Skip block definition sections (these are documentation sections, not actual properties)
-		// A block definition has Block=true AND populated Nested properties
-		// These are standalone sections like "A `restore_policy` block supports:"
-		if parentPath == "" && docProperty.Block && docProperty.Nested != nil && len(docProperty.Nested.Objects) > 0 {
+		if len(docProperty.ParseErrors) > 0 {
+			for _, parseErr := range docProperty.ParseErrors {
+				if strings.Contains(parseErr, "misspell of name from") {
+					errs = append(errs, fmt.Errorf("%s: argument `%s` has a misspelling: %s",
+						IdAndName(s), fullPath, parseErr))
+				} else {
+					// Report other parse errors
+					errs = append(errs, fmt.Errorf("%s: argument `%s` has parse error: %s",
+						IdAndName(s), fullPath, parseErr))
+				}
+			}
 			continue
 		}
 
+		// Check for deprecated properties in documentation content
 		if strings.Contains(strings.ToLower(docProperty.Content), "deprecated") {
 			continue
 		}
@@ -161,21 +171,16 @@ func (s S006) checkMissingInSchema(resourceType, parentPath string, documentatio
 		// Check if schema property exists
 		schemaProperty := schema.Objects[name]
 		if schemaProperty == nil {
+			// Check for "not available for" pattern - specific property not available for certain block types
 			if idx := strings.Index(strings.ToLower(docProperty.Content), "not available for"); idx > 0 {
 				remaining := docProperty.Content[idx:]
-				if codeValue := firstCodeValue(remaining); codeValue != "" && strings.Contains(fullPath, codeValue) {
+				if codeValue := util.FirstCodeValue(remaining); codeValue != "" && strings.Contains(fullPath, codeValue) {
 					continue
 				}
 			}
 
-			errs = append(errs, fmt.Errorf("%s: argument `%s` is documented at line %d but does not exist in schema - should this be removed or is it misspelled?",
-				IdAndName(s), fullPath, docProperty.Line))
-			continue
-		}
-
-		// Recursively check nested properties
-		// Skip if this property is marked as Block - its nested properties are documented separately
-		if docProperty.Block {
+			errs = append(errs, fmt.Errorf("%s: argument `%s` is documented  but does not exist in schema",
+				IdAndName(s), fullPath))
 			continue
 		}
 
@@ -187,17 +192,4 @@ func (s S006) checkMissingInSchema(resourceType, parentPath string, documentatio
 	}
 
 	return errs
-}
-
-// firstCodeValue extracts the first code value (text in backticks) from a string
-func firstCodeValue(text string) string {
-	start := strings.Index(text, "`")
-	if start == -1 {
-		return ""
-	}
-	end := strings.Index(text[start+1:], "`")
-	if end == -1 {
-		return ""
-	}
-	return text[start+1 : start+1+end]
 }

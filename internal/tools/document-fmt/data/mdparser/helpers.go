@@ -45,8 +45,8 @@ func isForceNew(line string) bool {
 }
 
 // extractFieldFromLine parses a field definition line and extracts its properties
-func extractFieldFromLine(line string) *models.Property {
-	field := &models.Property{
+func extractFieldFromLine(line string) *models.DocumentProperty {
+	field := &models.DocumentProperty{
 		Content: line,
 	}
 
@@ -128,12 +128,11 @@ func extractFieldFromLine(line string) *models.Property {
 				field.EnumEnd = sepIdx + end
 			}
 			// breaks if there are more than 1 possible value
-			if sepIdx = possibleValueSep(line[sepIdx+1:]); sepIdx >= 0 {
-				// field.Skip = true // TODO add skip
-				if field.ParseErrors == nil {
-					field.ParseErrors = []string{}
+			checkFromIdx := field.EnumEnd
+			if checkFromIdx < len(line) {
+				if sepIdx = possibleValueSep(line[checkFromIdx:]); sepIdx >= 0 {
+					field.Skip = true
 				}
-				field.ParseErrors = append(field.ParseErrors, "multiple possible values sections")
 			}
 		}
 		if len(enums) == 0 && strings.Index(res[3], "`") > 0 {
@@ -159,8 +158,8 @@ func setGuessEnums(values []string) []string {
 	return res
 }
 
-// newFieldFromLine creates a Property from a field definition line
-func newFieldFromLine(line string) *models.Property {
+// newFieldFromLine creates a DocumentProperty from a field definition line
+func newFieldFromLine(line string) *models.DocumentProperty {
 	f := extractFieldFromLine(line)
 	if guessBlockProperty(line) {
 		// extract real block type

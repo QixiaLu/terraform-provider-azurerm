@@ -33,13 +33,13 @@ type TerraformNodeData struct {
 	APIs     []API     // APIs used by this resource -- best effort, may not be populated
 	Timeouts []Timeout // Timeouts from *schema.Resource
 
-	SchemaProperties *models.Properties
+	SchemaProperties *models.SchemaProperties
 
 	Document *markdown.Document // resource document
 	// These are separated because when it comes to the docs, we may encounter duplicate properties where one is in attributes and another in arguments
 	// E.g. `identity` blocks, expect in both args and attrs, but the nested fields should be different
-	DocumentArguments  *models.Properties
-	DocumentAttributes *models.Properties
+	DocumentArguments  *models.DocumentProperties
+	DocumentAttributes *models.DocumentProperties
 
 	Errors []error // errors found in this resource
 }
@@ -244,7 +244,7 @@ func (rd *TerraformNodeData) populateDocumentData(fs afero.Fs) {
 }
 
 func (rd *TerraformNodeData) populateSchemaProperties() {
-	rd.SchemaProperties = models.NewProperties()
+	rd.SchemaProperties = models.NewSchemaProperties()
 
 	populateAllSchemaProperties(rd.SchemaProperties, rd.Resource)
 }
@@ -280,20 +280,19 @@ func (rd *TerraformNodeData) populateDocumentProperties() {
 	// }
 }
 
-func parseMdArgToProperties(argSection *markdown.ArgumentsSection) *models.Properties {
+func parseMdArgToProperties(argSection *markdown.ArgumentsSection) *models.DocumentProperties {
 	return mdparser.ParseMarkdownSection(argSection.GetContent())
 }
 
-func parseMdAttrToProperties(attrSection *markdown.AttributesSection) *models.Properties {
+func parseMdAttrToProperties(attrSection *markdown.AttributesSection) *models.DocumentProperties {
 	return mdparser.ParseMarkdownSection(attrSection.GetContent())
 }
 
-func populateAllSchemaProperties(properties *models.Properties, resource *schema.Resource) {
+func populateAllSchemaProperties(properties *models.SchemaProperties, resource *schema.Resource) {
 	// TODO: rename prop schema
 	for name, property := range resource.Schema {
 		// TODO guard against propSchema == nil? Realistically shouldn't be possible
-		properties.Names = append(properties.Names, name) // This isn't really needed for schema, but we'll leave it in case it's useful later
-		properties.Objects[name] = &models.Property{
+		properties.Objects[name] = &models.SchemaProperty{
 			Name:        name,
 			Type:        strings.TrimPrefix(property.Type.String(), "Type"),
 			Description: property.Description,
@@ -312,7 +311,7 @@ func populateAllSchemaProperties(properties *models.Properties, resource *schema
 			property.Block = true
 			// Expect nested, so init
 			// TODO: do we want to check this doesn't override existing? shouldnt be possible but just in case?
-			property.Nested = models.NewProperties()
+			property.Nested = models.NewSchemaProperties()
 
 			populateAllSchemaProperties(property.Nested, r)
 		}

@@ -53,7 +53,7 @@ func isSkipProp(rt, prop string) bool {
 	if _, ok := skipConfig.skipPaths[rt]; ok {
 		return true
 	}
-	
+
 	// Check if specific property path is skipped
 	if _, ok := skipConfig.skipPaths[rt+"."+prop]; ok {
 		return true

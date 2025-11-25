@@ -49,13 +49,13 @@ func Map2Slices[K comparable, V any](m map[K]V) ([]K, []V) {
 }
 
 func FirstCodeValue(line string) string {
-	if vals := ExtractCodeValue(line); len(vals) > 0 {
+	if vals := extractCodeValue(line); len(vals) > 0 {
 		return vals[0]
 	}
 	return ""
 }
 
-func ExtractCodeValue(line string) (res []string) {
+func extractCodeValue(line string) (res []string) {
 	idx1 := strings.Index(line, "`")
 	for idx1 >= 0 {
 		idx2 := idx1 + 1 + strings.Index(line[idx1+1:], "`")

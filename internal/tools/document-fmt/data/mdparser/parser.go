@@ -16,12 +16,12 @@ const (
 	IncorrectlyBlockMarked = "The document incorrectly implies this field is a block"
 )
 
-// ParseMarkdownSection is the main entry point for parsing markdown content into Properties.
+// ParseMarkdownSection is the main entry point for parsing markdown content into DocumentProperties.
 // It performs a three-phase parsing pipeline:
 // 1. Tokenization (via newMarkFromString)
 // 2. Structure building (via buildField)
 // 3. Linking (via buildStruct)
-func ParseMarkdownSection(content []string) *models.Properties {
+func ParseMarkdownSection(content []string) *models.DocumentProperties {
 	// Join lines back into a single string for parsing
 	fullContent := strings.Join(content, "\n")
 
@@ -29,7 +29,7 @@ func ParseMarkdownSection(content []string) *models.Properties {
 	mark.buildField()
 	mark.buildStruct()
 
-	result := models.NewProperties()
+	result := models.NewDocumentProperties()
 
 	// Copy top-level fields
 	for name, field := range mark.fields {
@@ -47,9 +47,9 @@ func ParseMarkdownSection(content []string) *models.Properties {
 	return result
 }
 
-// convertBlockToProperty converts a markBlock to a Property
-func convertBlockToProperty(block *markBlock) *models.Property {
-	prop := &models.Property{
+// convertBlockToProperty converts a markBlock to a DocumentProperty
+func convertBlockToProperty(block *markBlock) *models.DocumentProperty {
+	prop := &models.DocumentProperty{
 		Name:   block.Name,
 		Block:  true,
 		Line:   block.HeadLine,
@@ -118,7 +118,7 @@ func (m *mark) buildField() {
 
 // buildStruct performs Phase 3: Link block-type fields to their definitions
 func (m *mark) buildStruct() {
-	fillField := func(f *models.Property, parent string) {
+	fillField := func(f *models.DocumentProperty, parent string) {
 		if f.Block {
 			if b, msg := m.blockOfName(f.BlockTypeName, parent); b != nil {
 				f.Nested = b.asProperties()
@@ -182,10 +182,10 @@ func (m *mark) blockOfName(name string, parent string) (*markBlock, string) {
 
 	var msg string
 	if len(res) > 1 {
-		// Check if these are actual duplicate block definitions or just shared references
 		uniqueDefinitions := make(map[string]*markBlock)
 		for _, block := range res {
-			key := fmt.Sprintf("%s:%d", block.Name, len(block.Fields))
+			// Include the parent context (Of) in the key to distinguish blocks in different scopes
+			key := fmt.Sprintf("%s:%s:%d", block.Name, block.Of, len(block.Fields))
 			if existing, exists := uniqueDefinitions[key]; exists {
 				if !blocksHaveSameDefinition(existing, block) {
 					msg = fmt.Sprintf("duplicate block exists as name `%s`", name)

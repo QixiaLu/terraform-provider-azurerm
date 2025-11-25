@@ -30,7 +30,7 @@ type markItem struct {
 	toLine   int
 	lines    []string
 	itemType itemType
-	field    *models.Property
+	field    *models.DocumentProperty
 }
 
 func (m *markItem) content() string {
@@ -56,13 +56,13 @@ type markBlock struct {
 	Of       string
 	Name     string
 	HeadLine int
-	Fields   []*models.Property
-	asProp   *models.Properties
+	Fields   []*models.DocumentProperty
+	asProp   *models.DocumentProperties
 }
 
-func (b *markBlock) asProperties() *models.Properties {
+func (b *markBlock) asProperties() *models.DocumentProperties {
 	if b.asProp == nil {
-		res := models.NewProperties()
+		res := models.NewDocumentProperties()
 		for _, f := range b.Fields {
 			if _, ok := res.Objects[f.Name]; ok {
 				if f.ParseErrors == nil {
@@ -78,7 +78,7 @@ func (b *markBlock) asProperties() *models.Properties {
 	return b.asProp
 }
 
-func (b *markBlock) addField(f *models.Property) {
+func (b *markBlock) addField(f *models.DocumentProperty) {
 	b.Fields = append(b.Fields, f)
 }
 
@@ -86,7 +86,7 @@ func (b *markBlock) addField(f *models.Property) {
 type mark struct {
 	items  []*markItem
 	blocks []markBlock
-	fields map[string]*models.Property
+	fields map[string]*models.DocumentProperty
 }
 
 func (m *mark) lastItem() *markItem {
@@ -98,10 +98,6 @@ func (m *mark) lastItem() *markItem {
 
 func (m *mark) addItem(item *markItem) {
 	m.items = append(m.items, item)
-}
-
-func (m *mark) addItemWith(num int, line string, typ itemType) {
-	m.addItem(newMarkItem(num, line, typ))
 }
 
 func (m *mark) addLineOrItem(num int, line string, typ itemType) {
@@ -121,7 +117,7 @@ func (m *mark) addBlock(b markBlock) {
 func newMarkFromString(content string) *mark {
 	lines := strings.Split(content, "\n")
 	result := &mark{
-		fields: map[string]*models.Property{},
+		fields: map[string]*models.DocumentProperty{},
 	}
 
 	for idx, line := range lines {
