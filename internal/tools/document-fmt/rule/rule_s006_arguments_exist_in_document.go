@@ -37,15 +37,11 @@ func (s S006) Run(d *data.TerraformNodeData, fix bool) []error {
 		return errs
 	}
 
-	// If either is nil, we can't properly check, so short-circuit
 	if d.SchemaProperties == nil || d.DocumentArguments == nil {
 		return errs
 	}
 
-	// Check for properties missing in documentation
 	errs = append(errs, s.checkMissingInDoc(d.Name, "", d.SchemaProperties, d.DocumentArguments, d.DocumentArguments.BlockDefinitions)...)
-
-	// Check for properties missing in schema (might be typos or deprecated)
 	errs = append(errs, s.checkMissingInSchema(d.Name, "", d.DocumentArguments, d.SchemaProperties, d.DocumentArguments.BlockDefinitions)...)
 
 	return errs
@@ -56,7 +52,6 @@ func (s S006) checkMissingInDoc(resourceType, parentPath string, schema *models.
 	errs := make([]error, 0)
 
 	if schema == nil {
-
 		return errs
 	}
 

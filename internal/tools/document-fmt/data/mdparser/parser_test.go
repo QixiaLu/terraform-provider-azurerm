@@ -20,7 +20,6 @@ func init() {
 	testDir = filepath.Join(baseDir, "..", "..", "markdown", "testdata")
 }
 
-// TestParseMarkdownSection tests argument parsing similar to document-lint
 func TestParseMarkdownSection(t *testing.T) {
 	testCases := []struct {
 		file    string

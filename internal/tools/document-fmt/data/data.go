@@ -35,9 +35,7 @@ type TerraformNodeData struct {
 
 	SchemaProperties *models.SchemaProperties
 
-	Document *markdown.Document // resource document
-	// These are separated because when it comes to the docs, we may encounter duplicate properties where one is in attributes and another in arguments
-	// E.g. `identity` blocks, expect in both args and attrs, but the nested fields should be different
+	Document           *markdown.Document // resource document
 	DocumentArguments  *models.DocumentProperties
 	DocumentAttributes *models.DocumentProperties
 
@@ -289,9 +287,7 @@ func parseMdAttrToProperties(attrSection *markdown.AttributesSection) *models.Do
 }
 
 func populateAllSchemaProperties(properties *models.SchemaProperties, resource *schema.Resource) {
-	// TODO: rename prop schema
 	for name, property := range resource.Schema {
-		// TODO guard against propSchema == nil? Realistically shouldn't be possible
 		properties.Objects[name] = &models.SchemaProperty{
 			Name:        name,
 			Type:        strings.TrimPrefix(property.Type.String(), "Type"),
@@ -306,14 +302,13 @@ func populateAllSchemaProperties(properties *models.SchemaProperties, resource *
 		}
 
 		if r, ok := property.Elem.(*schema.Resource); ok {
-			property := properties.Objects[name]
+			schemaProperty := properties.Objects[name]
 
-			property.Block = true
+			schemaProperty.Block = true
 			// Expect nested, so init
-			// TODO: do we want to check this doesn't override existing? shouldnt be possible but just in case?
-			property.Nested = models.NewSchemaProperties()
+			schemaProperty.Nested = models.NewSchemaProperties()
 
-			populateAllSchemaProperties(property.Nested, r)
+			populateAllSchemaProperties(schemaProperty.Nested, r)
 		}
 
 		if r, ok := property.Elem.(*schema.Schema); ok {
