@@ -9,23 +9,23 @@ import (
 	"github.com/hashicorp/terraform-provider-azurerm/internal/tools/document-fmt/util"
 )
 
-type S006 struct{}
+type S008 struct{}
 
-var _ Rule = new(S006)
+var _ Rule = new(S008)
 
-func (s S006) ID() string {
-	return "S006"
+func (s S008) ID() string {
+	return "S008"
 }
 
-func (s S006) Name() string {
+func (s S008) Name() string {
 	return "Arguments Exist in Document"
 }
 
-func (s S006) Description() string {
+func (s S008) Description() string {
 	return "Determines whether all arguments defined in schema are documented, and checks for missing/misspelled properties"
 }
 
-func (s S006) Run(d *data.TerraformNodeData, fix bool) []error {
+func (s S008) Run(d *data.TerraformNodeData, fix bool) []error {
 	var errs []error
 
 	if !d.Document.Exists {
@@ -48,7 +48,7 @@ func (s S006) Run(d *data.TerraformNodeData, fix bool) []error {
 }
 
 // checkMissingInDoc checks if schema properties are missing from documentation
-func (s S006) checkMissingInDoc(resourceType, parentPath string, schema *models.SchemaProperties, documentation *models.DocumentProperties, blockDefinitions map[string]*models.DocumentProperty) []error {
+func (s S008) checkMissingInDoc(resourceType, parentPath string, schema *models.SchemaProperties, documentation *models.DocumentProperties, blockDefinitions map[string]*models.DocumentProperty) []error {
 	errs := make([]error, 0)
 
 	if schema == nil {
@@ -121,7 +121,7 @@ func (s S006) checkMissingInDoc(resourceType, parentPath string, schema *models.
 }
 
 // checkMissingInSchema checks if documented properties are missing from schema
-func (s S006) checkMissingInSchema(resourceType, parentPath string, documentation *models.DocumentProperties, schema *models.SchemaProperties, blockDefinitions map[string]*models.DocumentProperty) []error {
+func (s S008) checkMissingInSchema(resourceType, parentPath string, documentation *models.DocumentProperties, schema *models.SchemaProperties, blockDefinitions map[string]*models.DocumentProperty) []error {
 	errs := make([]error, 0)
 
 	if documentation == nil {

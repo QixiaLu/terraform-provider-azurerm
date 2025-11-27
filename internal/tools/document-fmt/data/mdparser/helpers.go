@@ -46,8 +46,10 @@ func isForceNew(line string) bool {
 
 // extractFieldFromLine parses a field definition line and extracts its properties
 func extractFieldFromLine(line string) *models.DocumentProperty {
+	// remove redundant /n
+	cleanedLine := strings.TrimRight(line, "/n")
 	field := &models.DocumentProperty{
-		Content: line,
+		Content: cleanedLine,
 	}
 
 	if defaultVal := getDefaultValue(line); defaultVal != "" {
