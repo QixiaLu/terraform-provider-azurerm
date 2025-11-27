@@ -24,7 +24,7 @@ func (ci *CheckIssue) Error() string {
 
 	if ci.FixLine != "" && ci.Line != "" && ci.FixLine != ci.Line {
 		result += "\n"
-		result += "     " + ci.Line + "\n"
+		result += "     " + ci.Line
 		result += "  => " + ci.FixLine
 	}
 
