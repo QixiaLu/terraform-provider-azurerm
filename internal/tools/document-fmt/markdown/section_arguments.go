@@ -129,12 +129,7 @@ func normalizeArgumentsContent(lines []string) []string {
 			}
 		}
 
-		// Property line processing
-		if strings.HasPrefix(line, "*") {
-			line = tryFixProp(line)
-		}
-
-		// Fix Required/Optional position and case
+		// Fix Required/Optional position and case FIRST (before tryFixProp)
 		line = strings.Replace(line, "(Optional) -", "- (Optional)", 1)
 		line = strings.Replace(line, "(Required) -", "- (Required)", 1)
 		line = strings.Replace(line, "- (optional)", "- (Optional)", 1)
@@ -143,6 +138,11 @@ func normalizeArgumentsContent(lines []string) []string {
 		// Fix missing dash after property name: "`-" -> "` -"
 		// Only replace when dash is followed by space or letter (not a digit)
 		line = regexp.MustCompile("`-([^0-9])").ReplaceAllString(line, "` -$1")
+
+		// Property line processing (after position fixes to avoid double dash)
+		if strings.HasPrefix(line, "*") {
+			line = tryFixProp(line)
+		}
 
 		// Add missing marker prefix for properties
 		if (strings.Contains(line, "(Optional)") || strings.Contains(line, "(Required)")) &&
