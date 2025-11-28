@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-provider-azurerm/internal/tools/document-fmt/markdown"
 )
 
+// S007 validates and fixes Required/Optional markers in documentation
 type S007 struct{}
 
 var _ Rule = new(S007)
@@ -46,65 +47,6 @@ func (s S007) Run(d *data.TerraformNodeData, fix bool) []error {
 	return errs
 }
 
-// getExpectedLine adds the required/optional marker to a line that's missing it
-func (s S007) getExpectedLine(line, marker string) string {
-	// Try to add after the first " - "
-	if idx := strings.Index(line, " - "); idx > 0 {
-		return line[:idx+3] + marker + " " + line[idx+3:]
-	}
-	// If no dash, add after the second backtick
-	firstBacktick := strings.Index(line, "`")
-	if firstBacktick >= 0 {
-		secondBacktick := strings.Index(line[firstBacktick+1:], "`")
-		if secondBacktick >= 0 {
-			idx := firstBacktick + 1 + secondBacktick + 1
-			return line[:idx] + " " + marker + line[idx:]
-		}
-	}
-	return line
-}
-
-// replaceRequiredness replaces one requiredness marker with another
-func (s S007) replaceRequiredness(line, from, to string) string {
-	if strings.Contains(line, from) {
-		return strings.Replace(line, from, to, 1)
-	} else {
-		// add after the first -
-		if idx := strings.Index(line, " - "); idx > 0 {
-			line = line[:idx+3] + to + " " + line[idx+3:]
-		} else {
-			// no dash add after second `
-			idx = strings.Index(line, "`")
-			idx += strings.Index(line[idx+1:], "`") + 1
-			line = line[:idx+1] + " " + to + line[idx+1:]
-		}
-	}
-	return line
-}
-
-// removeRequiredness removes (Required) or (Optional) markers from a line
-func (s S007) removeRequiredness(line string) string {
-	from := "(Required)"
-	to := "(Optional)"
-
-	var idx, size int
-	if idx = strings.Index(line, from); idx > 0 {
-		size = len(from)
-	} else if idx = strings.Index(line, to); idx > 0 {
-		size = len(to)
-	}
-
-	if idx > 0 {
-		if idx > 0 && line[idx-1] == ' ' && idx+size < len(line) && line[idx+size] == ' ' {
-			idx -= 1
-			size += 1
-		}
-		line = line[:idx] + line[idx+size:]
-	}
-
-	return line
-}
-
 // checkRequiredness checks if schema properties have correct Required/Optional markings in documentation
 func (s S007) checkRequiredness(d *data.TerraformNodeData, parentPath string, schema *models.SchemaProperties, docArgs *models.DocumentProperties, docAttrs *models.DocumentProperties, blockDefinitions map[string]*models.DocumentProperty, fix bool) []error {
 	errs := make([]error, 0)
@@ -115,7 +57,6 @@ func (s S007) checkRequiredness(d *data.TerraformNodeData, parentPath string, sc
 	}
 
 	for name, schemaProperty := range schema.Objects {
-		// TDOO: Add a rule check that Attr shouldnt have optional + required prefix
 		if !schemaProperty.Optional && schemaProperty.Computed {
 			continue
 		}
@@ -140,27 +81,41 @@ func (s S007) checkRequiredness(d *data.TerraformNodeData, parentPath string, sc
 			continue
 		}
 
-		if schemaProperty.Required {
-			if !docProperty.Required {
-				cleanContent := strings.TrimRight(docProperty.Content, "\n")
-				expected := s.replaceRequiredness(cleanContent, "(Required)", "(Optional)")
-				errs = append(errs, fmt.Errorf("%s: `%s` should be Required in %s\n%s\n=>%s",
-					IdAndName(s), fullPath, d.Document.Path, cleanContent, expected))  /// Only keep file name
+		if len(docProperty.ParseErrors) > 0 {
+			continue
+		}
 
-				if fix {
-					s.fixPropertyLine(d, docProperty.Line, expected, false)
-				}
+		if schemaProperty.Required && !docProperty.Required {
+			expected := s.replaceRequiredness(docProperty.Content, "(Optional)", "(Required)")
+			issue := NewValidationIssue(
+				s.ID(),
+				s.Name(),
+				fullPath,
+				fmt.Sprintf("`%s` should be marked as Required", fullPath),
+				d.Document.Path,
+				docProperty.Content,
+				expected,
+			)
+			errs = append(errs, issue)
+
+			if fix {
+				s.applyRequirednessFix(d, docProperty, true)
 			}
-		} else if schemaProperty.Optional {
-			if !docProperty.Optional {
-				cleanContent := strings.TrimRight(docProperty.Content, "\n")
-				expected := s.replaceRequiredness(cleanContent, "(Optional)", "(Required)")
-				errs = append(errs, fmt.Errorf("%s: `%s` should be Optional in %s\n%s\n=>%s",
-					IdAndName(s), fullPath, d.Document.Path, cleanContent, expected))   /// ONly keep file name
+		} else if schemaProperty.Optional && !docProperty.Optional {
+			expected := s.replaceRequiredness(docProperty.Content, "(Required)", "(Optional)")
+			issue := NewValidationIssue(
+				s.ID(),
+				s.Name(),
+				fullPath,
+				fmt.Sprintf("`%s` should be marked as Optional", fullPath),
+				d.Document.Path,
+				docProperty.Content,
+				expected,
+			)
+			errs = append(errs, issue)
 
-				if fix {
-					s.fixPropertyLine(d, docProperty.Line, expected, false)
-				}
+			if fix {
+				s.applyRequirednessFix(d, docProperty, false)
 			}
 		}
 
@@ -193,34 +148,56 @@ func (s S007) checkRequiredness(d *data.TerraformNodeData, parentPath string, sc
 	return errs
 }
 
-func (s S007) fixPropertyLine(d *data.TerraformNodeData, lineIndex int, expected string, isAttributesSection bool) {
+
+// replaceRequiredness replaces one requiredness marker with another
+func (s S007) replaceRequiredness(line, from, to string) string {
+	if strings.Contains(line, from) {
+		return strings.Replace(line, from, to, 1)
+	} else {
+		// add after the first -
+		if idx := strings.Index(line, " - "); idx > 0 {
+			line = line[:idx+3] + to + " " + line[idx+3:]
+		} else {
+			// no dash add after second `
+			idx = strings.Index(line, "`")
+			idx += strings.Index(line[idx+1:], "`") + 1
+			line = line[:idx+1] + " " + to + line[idx+1:]
+		}
+	}
+	return line
+}
+
+func (s S007) applyRequirednessFix(d *data.TerraformNodeData, docProperty *models.DocumentProperty, shouldBeRequired bool) {
 	if d.Document == nil {
 		return
 	}
 
-	// Find the correct section (Arguments or Attributes)
+	// Find Arguments section
+	var argsSection markdown.Section
 	for _, section := range d.Document.Sections {
-		var isTargetSection bool
-
-		if isAttributesSection {
-			_, isTargetSection = section.(*markdown.AttributesSection)
-		} else {
-			_, isTargetSection = section.(*markdown.ArgumentsSection)
+		if _, ok := section.(*markdown.ArgumentsSection); ok {
+			argsSection = section
+			break
 		}
-
-		if !isTargetSection {
-			continue
-		}
-
-		content := section.GetContent()
-
-		if lineIndex < 0 || lineIndex >= len(content) {
-			return
-		}
-
-		content[lineIndex] = expected
-		section.SetContent(content)
-		d.Document.HasChange = true
+	}
+	if argsSection == nil {
 		return
+	}
+
+	content := argsSection.GetContent()
+	lineIdx := docProperty.Line
+	from := "(Required)"
+	to := "(Optional)"
+	if shouldBeRequired {
+		from = "(Optional)"
+		to = "(Required)"
+	}
+
+	if lineIdx >= 0 && lineIdx < len(content) {
+		line := content[lineIdx]
+		fixedLine := s.replaceRequiredness(line, from ,to)
+		content[lineIdx] = fixedLine
+		argsSection.SetContent(content)
+		d.Document.HasChange = true
 	}
 }
