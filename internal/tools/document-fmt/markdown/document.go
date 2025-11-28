@@ -39,7 +39,7 @@ func (d *Document) Write(fs afero.Fs) error {
 	return nil
 }
 
-func (d *Document) Parse(fs afero.Fs) error {
+func (d *Document) Parse(fs afero.Fs, shouldNormalize bool) error {
 	var current Section
 	var content []string
 
@@ -48,9 +48,16 @@ func (d *Document) Parse(fs afero.Fs) error {
 		return fmt.Errorf("opening file `%s`: %+v", d.Path, err)
 	}
 
+	// Read all lines first
+	var lines []string
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
-		t := scanner.Text()
+		lines = append(lines, scanner.Text())
+	}
+	file.Close()
+
+	// Parse the lines into sections
+	for _, t := range lines {
 
 		// if length of `d.Content` is 0 and line has `---` prefix, we're parsing FrontMatter
 		if strings.HasPrefix(t, "#") || (len(content) == 0 && strings.HasPrefix(t, "---")) {
@@ -84,6 +91,15 @@ func (d *Document) Parse(fs afero.Fs) error {
 		content = append(content, "")
 		current.SetContent(content)
 		d.Sections = append(d.Sections, current)
+	}
+
+	// Apply normalization to Arguments section if requested
+	if shouldNormalize {
+		for _, section := range d.Sections {
+			if argSection, ok := section.(*ArgumentsSection); ok {
+				argSection.Normalize()
+			}
+		}
 	}
 
 	return nil

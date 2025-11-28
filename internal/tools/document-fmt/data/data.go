@@ -39,7 +39,8 @@ type TerraformNodeData struct {
 	DocumentArguments  *models.DocumentProperties
 	DocumentAttributes *models.DocumentProperties
 
-	Errors []error // errors found in this resource
+	ShouldNormalize bool    // whether to normalize document before parsing
+	Errors          []error // errors found in this resource
 }
 
 func newTerraformNodeData(fs afero.Fs, providerDir string, service Service, name string, resourceType ResourceType, source any) (*TerraformNodeData, error) {
@@ -85,7 +86,7 @@ func newTerraformNodeData(fs afero.Fs, providerDir string, service Service, name
 	return &result, nil
 }
 
-func GetAllTerraformNodeData(fs afero.Fs, providerDir string, serviceName string, resourceName string) []*TerraformNodeData {
+func GetAllTerraformNodeData(fs afero.Fs, providerDir string, serviceName string, resourceName string, shouldNormalize bool) []*TerraformNodeData {
 	result := make([]*TerraformNodeData, 0)
 
 	pkgData := loadPackages(providerDir)
@@ -124,6 +125,7 @@ func GetAllTerraformNodeData(fs afero.Fs, providerDir string, serviceName string
 				log.Error(err)
 				continue
 			}
+			rd.ShouldNormalize = shouldNormalize
 
 			rd.populateAdditionalFields(fs)
 
@@ -145,6 +147,7 @@ func GetAllTerraformNodeData(fs afero.Fs, providerDir string, serviceName string
 				log.Error(err)
 				continue
 			}
+			rd.ShouldNormalize = shouldNormalize
 
 			rd.populateAdditionalFields(fs)
 
@@ -235,7 +238,7 @@ func (rd *TerraformNodeData) populateDocumentData(fs afero.Fs) {
 	rd.Document.Exists = util.FileExists(fs, rd.Document.Path)
 
 	if rd.Document.Exists {
-		if err := rd.Document.Parse(fs); err != nil {
+		if err := rd.Document.Parse(fs, rd.ShouldNormalize); err != nil {
 			rd.Errors = append(rd.Errors, fmt.Errorf("failed to parse documentation: %+v", err)) // Output error instead?
 		}
 	}

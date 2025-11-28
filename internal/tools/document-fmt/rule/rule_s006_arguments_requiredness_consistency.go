@@ -25,7 +25,7 @@ func (rc *RequirednesChecker) CheckMarkers(ctx *PropertyCheckContext) []*CheckIs
 		issues = append(issues, &CheckIssue{
 			LineNum:   ctx.DocProperty.Line,
 			Key:       ctx.FullPath,
-			Message:   fmt.Sprintf("S006: `%s` should be marked as (Required)", ctx.FullPath),
+			Message:   fmt.Sprintf("S006: %s: `%s` should be marked as (Required)", ctx.FileName, ctx.FullPath),
 			FixLine:   rc.FixRequiredness(ctx.DocProperty.Content, "(Optional)", "(Required)"),
 			Line:      ctx.DocProperty.Content,
 			DocProp:   ctx.DocProperty,
@@ -35,7 +35,7 @@ func (rc *RequirednesChecker) CheckMarkers(ctx *PropertyCheckContext) []*CheckIs
 		issues = append(issues, &CheckIssue{
 			LineNum:   ctx.DocProperty.Line,
 			Key:       ctx.FullPath,
-			Message:   fmt.Sprintf("S006: `%s` should be marked as (Optional)", ctx.FullPath),
+			Message:   fmt.Sprintf("S006: %s: `%s` should be marked as (Optional)", ctx.FileName, ctx.FullPath),
 			FixLine:   rc.FixRequiredness(ctx.DocProperty.Content, "(Required)", "(Optional)"),
 			Line:      ctx.DocProperty.Content,
 			DocProp:   ctx.DocProperty,
@@ -55,14 +55,14 @@ func (rc *RequirednesChecker) FixRequiredness(line, from, to string) string {
 		if idx := strings.Index(line, " - "); idx > 0 {
 			line = line[:idx+3] + to + " " + line[idx+3:]
 		} else {
-			// no dash, add after second backtick
-			idx := strings.Index(line, "`")
-			if idx >= 0 {
-				secondIdx := strings.Index(line[idx+1:], "`")
-				if secondIdx >= 0 {
-					idx = idx + 1 + secondIdx + 1
-					line = line[:idx] + " " + to + line[idx:]
-				}
+			// add after the first -
+			if idx := strings.Index(line, " - "); idx > 0 {
+				line = line[:idx+3] + to + " " + line[idx+3:]
+			} else {
+				// no dash add after second `
+				idx = strings.Index(line, "`")
+				idx += strings.Index(line[idx+1:], "`") + 1
+				line = line[:idx+1] + " " + to + line[idx+1:]
 			}
 		}
 	}

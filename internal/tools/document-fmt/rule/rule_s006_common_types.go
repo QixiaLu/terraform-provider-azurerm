@@ -4,6 +4,8 @@
 package rule
 
 import (
+	"strings"
+
 	"github.com/hashicorp/terraform-provider-azurerm/internal/tools/document-fmt/data/models"
 )
 
@@ -24,8 +26,15 @@ func (ci *CheckIssue) Error() string {
 
 	if ci.FixLine != "" && ci.Line != "" && ci.FixLine != ci.Line {
 		result += "\n"
-		result += "     " + ci.Line
+		line := ci.Line
+		result += "     " + line
+		if !strings.HasSuffix(line, "\n") {
+			result += "\n"
+		}
 		result += "  => " + ci.FixLine
+		if !strings.HasSuffix(ci.FixLine, "\n") {
+			result += "\n"
+		}
 	}
 
 	return result
@@ -37,4 +46,5 @@ type PropertyCheckContext struct {
 	SchemaProperty   *models.SchemaProperty
 	DocProperty      *models.DocumentProperty
 	BlockDefinitions map[string]*models.DocumentProperty
+	FileName         string
 }

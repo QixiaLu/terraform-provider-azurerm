@@ -23,6 +23,7 @@ func (ec *ExistenceChecker) CheckMissingInDoc(
 	documentation *models.DocumentProperties,
 	blockDefinitions map[string]*models.DocumentProperty,
 	resourceType string,
+	fileName string,
 ) []*CheckIssue {
 	var issues []*CheckIssue
 
@@ -59,7 +60,7 @@ func (ec *ExistenceChecker) CheckMissingInDoc(
 			issues = append(issues, &CheckIssue{
 				LineNum:   0,
 				Key:       fullPath,
-				Message:   fmt.Sprintf("S006: argument `%s` exists in schema but is missing from documentation", fullPath),
+				Message:   fmt.Sprintf("S006: %s: `%s` exists in schema but is missing from documentation", fileName, fullPath),
 				CheckType: "MissInDoc",
 			})
 			continue
@@ -72,7 +73,7 @@ func (ec *ExistenceChecker) CheckMissingInDoc(
 				issues = append(issues, &CheckIssue{
 					LineNum:   docProperty.Line,
 					Key:       fullPath,
-					Message:   fmt.Sprintf("S006: argument `%s` should be declared as a block", fullPath),
+					Message:   fmt.Sprintf("S006: %s: `%s` should be declared as a block", fileName, fullPath),
 					CheckType: "MissBlockDeclare",
 				})
 				continue
@@ -84,7 +85,7 @@ func (ec *ExistenceChecker) CheckMissingInDoc(
 					linkedDocProperty := blockDefinitions[docProperty.BlockTypeName]
 					if linkedDocProperty != nil && linkedDocProperty.Nested != nil && len(linkedDocProperty.Nested.Objects) > 0 {
 						// Recursively check nested properties in shared block
-						issues = append(issues, ec.CheckMissingInDoc(d, fullPath, schemaProperty.Nested, linkedDocProperty.Nested, blockDefinitions, resourceType)...)
+						issues = append(issues, ec.CheckMissingInDoc(d, fullPath, schemaProperty.Nested, linkedDocProperty.Nested, blockDefinitions, resourceType, fileName)...)
 						continue
 					}
 				}
@@ -92,7 +93,7 @@ func (ec *ExistenceChecker) CheckMissingInDoc(
 				issues = append(issues, &CheckIssue{
 					LineNum:   docProperty.Line,
 					Key:       fullPath,
-					Message:   fmt.Sprintf("S006: `%s` block is missing from documentation", fullPath),
+					Message:   fmt.Sprintf("S006: %s: `%s` block is missing from documentation", fileName, fullPath),
 					CheckType: "MissBlockDeclare",
 				})
 				continue
@@ -100,7 +101,7 @@ func (ec *ExistenceChecker) CheckMissingInDoc(
 
 			// Recursively check nested properties
 			if docProperty.Nested != nil {
-				issues = append(issues, ec.CheckMissingInDoc(d, fullPath, schemaProperty.Nested, docProperty.Nested, blockDefinitions, resourceType)...)
+				issues = append(issues, ec.CheckMissingInDoc(d, fullPath, schemaProperty.Nested, docProperty.Nested, blockDefinitions, resourceType, fileName)...)
 			}
 		}
 	}
@@ -116,6 +117,7 @@ func (ec *ExistenceChecker) CheckMissingInSchema(
 	schema *models.SchemaProperties,
 	blockDefinitions map[string]*models.DocumentProperty,
 	resourceType string,
+	fileName string,
 ) []*CheckIssue {
 	var issues []*CheckIssue
 
@@ -141,14 +143,13 @@ func (ec *ExistenceChecker) CheckMissingInSchema(
 
 		schemaProperty := schema.Objects[name]
 
-		// Handle parse errors first
 		if len(docProperty.ParseErrors) > 0 {
 			for _, parseErr := range docProperty.ParseErrors {
 				if strings.Contains(parseErr, "misspell of name from") {
 					issues = append(issues, &CheckIssue{
 						LineNum:   docProperty.Line,
 						Key:       fullPath,
-						Message:   fmt.Sprintf("S006: `%s` does not exist in schema - possible misspelling?", name),
+						Message:   fmt.Sprintf("S006: %s: `%s` does not exist in schema - possible misspelling?", fileName, fullPath),
 						DocProp:   docProperty,
 						CheckType: "Misspelling",
 					})
@@ -167,9 +168,21 @@ func (ec *ExistenceChecker) CheckMissingInSchema(
 			issues = append(issues, &CheckIssue{
 				LineNum:   docProperty.Line,
 				Key:       fullPath,
-				Message:   fmt.Sprintf("S006: `%s` exists in documentation but not in schema", fullPath),
+				Message:   fmt.Sprintf("S006: %s: `%s` exists in documentation but not in schema", fileName, fullPath),
 				DocProp:   docProperty,
 				CheckType: "MissInCode",
+			})
+			continue
+		}
+
+		// Check if document marks field as block but schema doesn't have nested properties
+		if docProperty.Block && (schemaProperty.Nested == nil || len(schemaProperty.Nested.Objects) == 0) {
+			issues = append(issues, &CheckIssue{
+				LineNum:   docProperty.Line,
+				Key:       fullPath,
+				Message:   fmt.Sprintf("S006: %s: The document incorrectly implies `%s` is a block (contains phrases like 'as defined below')", fileName, fullPath),
+				DocProp:   docProperty,
+				CheckType: "IncorrectlyBlockMarked",
 			})
 			continue
 		}
@@ -177,7 +190,7 @@ func (ec *ExistenceChecker) CheckMissingInSchema(
 		// Recursively check nested orphaned properties
 		if docProperty.Nested != nil && len(docProperty.Nested.Objects) > 0 {
 			if schemaProperty.Nested != nil {
-				issues = append(issues, ec.CheckMissingInSchema(fullPath, docProperty.Nested, schemaProperty.Nested, blockDefinitions, resourceType)...)
+				issues = append(issues, ec.CheckMissingInSchema(fullPath, docProperty.Nested, schemaProperty.Nested, blockDefinitions, resourceType, fileName)...)
 			}
 		}
 	}
@@ -186,7 +199,7 @@ func (ec *ExistenceChecker) CheckMissingInSchema(
 }
 
 // mergeMisspellings identifies potential misspellings by comparing missed properties
-func (ec *ExistenceChecker) mergeMisspellings(issues []*CheckIssue) []*CheckIssue {
+func (ec *ExistenceChecker) mergeMisspellings(issues []*CheckIssue, fileName string) []*CheckIssue {
 	var missInDoc, missInCode []*CheckIssue
 
 	// Collect all miss-in-doc and miss-in-code issues
@@ -214,7 +227,7 @@ func (ec *ExistenceChecker) mergeMisspellings(issues []*CheckIssue) []*CheckIssu
 				misspellings = append(misspellings, &CheckIssue{
 					LineNum:   codeIssue.LineNum,
 					Key:       codeIssue.Key,
-					Message:   fmt.Sprintf("S006: `%s` does not exist in schema - should this be `%s`?", codeName, docName),
+					Message:   fmt.Sprintf("S006: %s: `%s` does not exist in schema - should this be `%s`?", fileName, codeName, docName),
 					DocProp:   codeIssue.DocProp,
 					CheckType: "Misspelling",
 				})

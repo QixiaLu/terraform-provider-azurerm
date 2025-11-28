@@ -31,11 +31,12 @@ func (fc *ForceNewChecker) CheckMarkers(ctx *PropertyCheckContext) []*CheckIssue
 
 	// Check: ForceNew markers
 	if ctx.SchemaProperty.ForceNew != ctx.DocProperty.ForceNew {
+		fileName := ctx.FileName
 		if ctx.SchemaProperty.ForceNew && !ctx.DocProperty.ForceNew {
 			issues = append(issues, &CheckIssue{
 				LineNum:   ctx.DocProperty.Line,
 				Key:       ctx.FullPath,
-				Message:   fmt.Sprintf("S006: `%s` should be marked as ForceNew", ctx.FullPath),
+				Message:   fmt.Sprintf("S006: %s: `%s` should be marked as ForceNew", fileName, ctx.FullPath),
 				FixLine:   fc.FixForceNew(ctx.DocProperty.Content, true),
 				Line:      ctx.DocProperty.Content,
 				DocProp:   ctx.DocProperty,
@@ -45,7 +46,7 @@ func (fc *ForceNewChecker) CheckMarkers(ctx *PropertyCheckContext) []*CheckIssue
 			issues = append(issues, &CheckIssue{
 				LineNum:   ctx.DocProperty.Line,
 				Key:       ctx.FullPath,
-				Message:   fmt.Sprintf("S006: `%s` should not be marked as ForceNew", ctx.FullPath),
+				Message:   fmt.Sprintf("S006: %s: `%s` should not be marked as ForceNew", fileName, ctx.FullPath),
 				FixLine:   fc.FixForceNew(ctx.DocProperty.Content, false),
 				Line:      ctx.DocProperty.Content,
 				DocProp:   ctx.DocProperty,
@@ -61,7 +62,7 @@ func (fc *ForceNewChecker) CheckMarkers(ctx *PropertyCheckContext) []*CheckIssue
 func (fc *ForceNewChecker) FixForceNew(line string, shouldAdd bool) string {
 	if shouldAdd {
 		// Add ForceNew message if not present
-		line = strings.TrimRight(line, " ")
+		line = strings.TrimRight(line, " \t\r\n")
 		if strings.HasSuffix(line, ",") {
 			line = line[:len(line)-1] + "."
 		} else if !strings.HasSuffix(line, ".") {

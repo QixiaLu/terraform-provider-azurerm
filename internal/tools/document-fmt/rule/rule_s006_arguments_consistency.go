@@ -4,6 +4,7 @@
 package rule
 
 import (
+	"path/filepath"
 	"strings"
 
 	"github.com/hashicorp/terraform-provider-azurerm/internal/tools/document-fmt/data"
@@ -43,32 +44,33 @@ func (s S006) Run(d *data.TerraformNodeData, fix bool) []error {
 		return nil
 	}
 
-	// Use ExistenceChecker for property existence validation
 	existenceChecker := &ExistenceChecker{}
 
 	var issues []*CheckIssue
 	resourceType := d.Name
+	fileName := getRelevantPath(d.Document.Path)
 
 	// First pass: check schema properties for existence
 	issues = append(issues, existenceChecker.CheckMissingInDoc(
 		d, "", d.SchemaProperties, d.DocumentArguments,
-		d.DocumentArguments.BlockDefinitions, resourceType)...)
+		d.DocumentArguments.BlockDefinitions, resourceType, fileName)...)
 
-	// Second pass: check for marker consistency (requiredness, forcenew) recursively
+	// Second pass: check for marker consistency recursively
 	issues = append(issues, s.checkMarkersInDoc(
 		"", d.SchemaProperties, d.DocumentArguments,
-		d.DocumentArguments.BlockDefinitions, resourceType)...)
+		d.DocumentArguments.BlockDefinitions, resourceType, fileName)...)
 
 	// Third pass: check orphaned doc properties
 	issues = append(issues, existenceChecker.CheckMissingInSchema(
 		"", d.DocumentArguments, d.SchemaProperties,
-		d.DocumentArguments.BlockDefinitions, resourceType)...)
+		d.DocumentArguments.BlockDefinitions, resourceType, fileName)...)
 
 	// Merge potential misspellings issues
-	issues = existenceChecker.mergeMisspellings(issues)
+	issues = existenceChecker.mergeMisspellings(issues, fileName)
 
 	if fix {
 		s.applyFixes(d, issues)
+		d.Document.HasChange = true
 		return nil
 	}
 
@@ -79,20 +81,23 @@ func (s S006) Run(d *data.TerraformNodeData, fix bool) []error {
 	return errs
 }
 
-// checkMarkersInDoc recursively checks marker consistency (requiredness, forcenew) for properties
-// that exist in both schema and documentation
+// checkMarkersInDoc recursively checks marker consistency (requiredness, forcenew) and format errors
+// for properties that exist in both schema and documentation
 func (s S006) checkMarkersInDoc(
 	parentPath string,
 	schema *models.SchemaProperties,
 	documentation *models.DocumentProperties,
 	blockDefinitions map[string]*models.DocumentProperty,
 	resourceType string,
+	fileName string,
 ) []*CheckIssue {
 	var issues []*CheckIssue
 
 	if schema == nil || documentation == nil {
 		return issues
 	}
+
+	formatErrorChecker := &FormatErrorChecker{}
 
 	for name, schemaProperty := range schema.Objects {
 		// Skip computed-only properties and 'id' field
@@ -123,6 +128,13 @@ func (s S006) checkMarkersInDoc(
 			continue
 		}
 
+		if len(docProperty.ParseErrors) > 0 {
+			formatIssues := formatErrorChecker.CheckFormatError(
+				fullPath, docProperty, schemaProperty, fileName)
+			issues = append(issues, formatIssues...)
+			continue
+		}
+
 		// Check for block type declarations (nested properties)
 		if schemaProperty.Nested != nil && len(schemaProperty.Nested.Objects) > 0 {
 			if !docProperty.Block {
@@ -136,9 +148,9 @@ func (s S006) checkMarkersInDoc(
 					linkedDocProperty := blockDefinitions[docProperty.BlockTypeName]
 					if linkedDocProperty != nil && linkedDocProperty.Nested != nil && len(linkedDocProperty.Nested.Objects) > 0 {
 						// Recursively check marker issues for shared block's nested properties
-						issues = append(issues, s.checkMarkersInDoc(fullPath, schemaProperty.Nested, linkedDocProperty.Nested, blockDefinitions, resourceType)...)
+						issues = append(issues, s.checkMarkersInDoc(fullPath, schemaProperty.Nested, linkedDocProperty.Nested, blockDefinitions, resourceType, fileName)...)
 						// Check this block's own markers
-						markerIssues := s.checkSchemaProperty(fullPath, schemaProperty, docProperty, blockDefinitions)
+						markerIssues := s.checkSchemaProperty(fullPath, schemaProperty, docProperty, blockDefinitions, fileName)
 						issues = append(issues, markerIssues...)
 						continue
 					}
@@ -149,15 +161,15 @@ func (s S006) checkMarkersInDoc(
 
 			// Recursively check marker issues for nested properties
 			if docProperty.Nested != nil {
-				issues = append(issues, s.checkMarkersInDoc(fullPath, schemaProperty.Nested, docProperty.Nested, blockDefinitions, resourceType)...)
+				issues = append(issues, s.checkMarkersInDoc(fullPath, schemaProperty.Nested, docProperty.Nested, blockDefinitions, resourceType, fileName)...)
 			}
 
 			// Check this block's own markers (Requiredness, ForceNew)
-			markerIssues := s.checkSchemaProperty(fullPath, schemaProperty, docProperty, blockDefinitions)
+			markerIssues := s.checkSchemaProperty(fullPath, schemaProperty, docProperty, blockDefinitions, fileName)
 			issues = append(issues, markerIssues...)
 		} else {
 			// For non-nested properties: check markers (Requiredness, ForceNew)
-			markerIssues := s.checkSchemaProperty(fullPath, schemaProperty, docProperty, blockDefinitions)
+			markerIssues := s.checkSchemaProperty(fullPath, schemaProperty, docProperty, blockDefinitions, fileName)
 			issues = append(issues, markerIssues...)
 		}
 	}
@@ -170,6 +182,7 @@ func (s S006) checkSchemaProperty(
 	schemaProperty *models.SchemaProperty,
 	docProperty *models.DocumentProperty,
 	blockDefinitions map[string]*models.DocumentProperty,
+	fileName string,
 ) []*CheckIssue {
 	var issues []*CheckIssue
 
@@ -182,6 +195,7 @@ func (s S006) checkSchemaProperty(
 		SchemaProperty:   schemaProperty,
 		DocProperty:      docProperty,
 		BlockDefinitions: blockDefinitions,
+		FileName:         fileName,
 	}
 
 	// Check requiredness markers (Required/Optional)
@@ -231,6 +245,7 @@ func (s S006) applyFixes(d *data.TerraformNodeData, issues []*CheckIssue) {
 	// Use checker instances for fixes
 	requiredChecker := &RequirednesChecker{}
 	forceNewChecker := &ForceNewChecker{}
+	formatErrorChecker := &FormatErrorChecker{}
 
 	// Apply fixes for each line
 	for lineIdx, lineIssues := range issuesByLine {
@@ -243,14 +258,11 @@ func (s S006) applyFixes(d *data.TerraformNodeData, issues []*CheckIssue) {
 				fixedLine = requiredChecker.FixRequiredness(fixedLine, "(Optional)", "(Required)")
 			case "OptionalMiss":
 				fixedLine = requiredChecker.FixRequiredness(fixedLine, "(Required)", "(Optional)")
-			}
-		}
-
-		for _, issue := range lineIssues {
-			switch issue.CheckType {
 			case "ForceNewMiss":
 				shouldAdd := strings.Contains(issue.Message, "should be marked as ForceNew")
 				fixedLine = forceNewChecker.FixForceNew(fixedLine, shouldAdd)
+			case "FormatError":
+				fixedLine = formatErrorChecker.FixFormatError(fixedLine, issue)
 			}
 		}
 
@@ -259,4 +271,15 @@ func (s S006) applyFixes(d *data.TerraformNodeData, issues []*CheckIssue) {
 
 	argsSection.SetContent(content)
 	d.Document.HasChange = true
+}
+
+// getRelevantPath extracts the relevant part of file path for display
+func getRelevantPath(fullPath string) string {
+	path := filepath.ToSlash(fullPath)
+
+	if idx := strings.Index(path, "website/docs/"); idx >= 0 {
+		return path[idx:]
+	}
+
+	return filepath.Base(fullPath)
 }
