@@ -71,7 +71,6 @@ func (s S006) Run(d *data.TerraformNodeData, fix bool) []error {
 	if fix {
 		s.applyFixes(d, issues)
 		d.Document.HasChange = true
-		return nil
 	}
 
 	var errs []error

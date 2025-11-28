@@ -48,16 +48,9 @@ func (d *Document) Parse(fs afero.Fs, shouldNormalize bool) error {
 		return fmt.Errorf("opening file `%s`: %+v", d.Path, err)
 	}
 
-	// Read all lines first
-	var lines []string
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
-		lines = append(lines, scanner.Text())
-	}
-	file.Close()
-
-	// Parse the lines into sections
-	for _, t := range lines {
+		t := scanner.Text()
 
 		// if length of `d.Content` is 0 and line has `---` prefix, we're parsing FrontMatter
 		if strings.HasPrefix(t, "#") || (len(content) == 0 && strings.HasPrefix(t, "---")) {
