@@ -130,10 +130,19 @@ func normalizeArgumentsContent(lines []string) []string {
 		}
 
 		// Fix Required/Optional position and case FIRST (before tryFixProp)
-		line = strings.Replace(line, "(Optional) -", "- (Optional)", 1)
-		line = strings.Replace(line, "(Required) -", "- (Required)", 1)
-		line = strings.Replace(line, "- (optional)", "- (Optional)", 1)
-		line = strings.Replace(line, "- (required)", "- (Required)", 1)
+		line = regexp.MustCompile(`(?i)-\s*\((optional)\)\s*-`).ReplaceAllStringFunc(line, func(s string) string {
+			return "- (Optional)"
+		})
+		line = regexp.MustCompile(`(?i)-\s*\((required)\)\s*-`).ReplaceAllStringFunc(line, func(s string) string {
+			return "- (Required)"
+		})
+
+		line = regexp.MustCompile(`(?i)\((optional)\)\s*-`).ReplaceAllStringFunc(line, func(s string) string {
+			return "- (Optional)"
+		})
+		line = regexp.MustCompile(`(?i)\((required)\)\s*-`).ReplaceAllStringFunc(line, func(s string) string {
+			return "- (Required)"
+		})
 
 		// Fix missing dash after property name: "`-" -> "` -"
 		// Only replace when dash is followed by space or letter (not a digit)
