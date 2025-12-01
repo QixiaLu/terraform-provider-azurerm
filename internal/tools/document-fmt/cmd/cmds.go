@@ -33,7 +33,7 @@ func Make() *cobra.Command {
 			validateProviderDirectoryAccess(fs)
 		},
 		Run: func(cmd *cobra.Command, args []string) {
-			resources := data.GetAllTerraformNodeData(fs, flags.ProviderDirectory, flags.Service, flags.Resource)
+			resources := data.GetAllTerraformNodeData(fs, flags.ProviderDirectory, flags.Service, flags.Resource, false)
 
 			v := validator.Validator{}
 			for _, r := range resources {
@@ -76,7 +76,7 @@ func Make() *cobra.Command {
 			validateProviderDirectoryAccess(fs)
 		},
 		Run: func(cmd *cobra.Command, args []string) {
-			resources := data.GetAllTerraformNodeData(fs, flags.ProviderDirectory, flags.Service, flags.Resource)
+			resources := data.GetAllTerraformNodeData(fs, flags.ProviderDirectory, flags.Service, flags.Resource, true)
 
 			v := validator.Validator{}
 			errCount, resourceWithErrCount := 0, 0

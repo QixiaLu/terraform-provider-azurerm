@@ -10,6 +10,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-provider-azurerm/internal/provider"
 	"github.com/hashicorp/terraform-provider-azurerm/internal/sdk"
+	"github.com/hashicorp/terraform-provider-azurerm/internal/tools/document-fmt/data/mdparser"
+	"github.com/hashicorp/terraform-provider-azurerm/internal/tools/document-fmt/data/models"
 	"github.com/hashicorp/terraform-provider-azurerm/internal/tools/document-fmt/markdown"
 	"github.com/hashicorp/terraform-provider-azurerm/internal/tools/document-fmt/util"
 	log "github.com/sirupsen/logrus"
@@ -31,9 +33,14 @@ type TerraformNodeData struct {
 	APIs     []API     // APIs used by this resource -- best effort, may not be populated
 	Timeouts []Timeout // Timeouts from *schema.Resource
 
-	Document *markdown.Document // resource document
+	SchemaProperties *models.SchemaProperties
 
-	Errors []error // errors found in this resource
+	Document           *markdown.Document // resource document
+	DocumentArguments  *models.DocumentProperties
+	DocumentAttributes *models.DocumentProperties
+
+	ShouldNormalize bool    // whether to normalize document before parsing
+	Errors          []error
 }
 
 func newTerraformNodeData(fs afero.Fs, providerDir string, service Service, name string, resourceType ResourceType, source any) (*TerraformNodeData, error) {
@@ -79,7 +86,7 @@ func newTerraformNodeData(fs afero.Fs, providerDir string, service Service, name
 	return &result, nil
 }
 
-func GetAllTerraformNodeData(fs afero.Fs, providerDir string, serviceName string, resourceName string) []*TerraformNodeData {
+func GetAllTerraformNodeData(fs afero.Fs, providerDir string, serviceName string, resourceName string, shouldNormalize bool) []*TerraformNodeData {
 	result := make([]*TerraformNodeData, 0)
 
 	pkgData := loadPackages(providerDir)
@@ -118,6 +125,7 @@ func GetAllTerraformNodeData(fs afero.Fs, providerDir string, serviceName string
 				log.Error(err)
 				continue
 			}
+			rd.ShouldNormalize = shouldNormalize
 
 			rd.populateAdditionalFields(fs)
 
@@ -139,6 +147,7 @@ func GetAllTerraformNodeData(fs afero.Fs, providerDir string, serviceName string
 				log.Error(err)
 				continue
 			}
+			rd.ShouldNormalize = shouldNormalize
 
 			rd.populateAdditionalFields(fs)
 
@@ -215,6 +224,8 @@ func (rd *TerraformNodeData) populateAdditionalFields(fs afero.Fs) {
 	rd.populateAPIData()
 	rd.populateTimeouts()
 	rd.populateDocumentData(fs)
+	rd.populateDocumentProperties()
+	rd.populateSchemaProperties()
 }
 
 func (rd *TerraformNodeData) populateAPIData() {
@@ -227,8 +238,59 @@ func (rd *TerraformNodeData) populateDocumentData(fs afero.Fs) {
 	rd.Document.Exists = util.FileExists(fs, rd.Document.Path)
 
 	if rd.Document.Exists {
-		if err := rd.Document.Parse(fs); err != nil {
+		if err := rd.Document.Parse(fs, rd.ShouldNormalize); err != nil {
 			rd.Errors = append(rd.Errors, fmt.Errorf("failed to parse documentation: %+v", err)) // Output error instead?
+		}
+	}
+}
+
+func (rd *TerraformNodeData) populateSchemaProperties() {
+	rd.SchemaProperties = models.NewSchemaProperties()
+
+	populateAllSchemaProperties(rd.SchemaProperties, rd.Resource)
+}
+
+func (rd *TerraformNodeData) populateDocumentProperties() {
+	argumentsSection := rd.Document.GetArgumentsSection()
+
+	if argumentsSection != nil {
+		if parsedProps := parseMdArgToProperties(argumentsSection); parsedProps != nil {
+			rd.DocumentArguments = parsedProps
+		}
+	}
+}
+
+func parseMdArgToProperties(argSection *markdown.ArgumentsSection) *models.DocumentProperties {
+	return mdparser.ParseMarkdownSection(argSection.GetContent())
+}
+
+func populateAllSchemaProperties(properties *models.SchemaProperties, resource *schema.Resource) {
+	for name, property := range resource.Schema {
+		properties.Objects[name] = &models.SchemaProperty{
+			Name:        name,
+			Type:        strings.TrimPrefix(property.Type.String(), "Type"),
+			Description: property.Description,
+			Required:    property.Required,
+			Optional:    property.Optional,
+			Computed:    property.Computed,
+			ForceNew:    property.ForceNew,
+			Deprecated:  property.Deprecated != "",
+			// PossibleValues:  nil, // TODO
+			// DefaultValue:    nil, // TODO
+		}
+
+		if r, ok := property.Elem.(*schema.Resource); ok {
+			schemaProperty := properties.Objects[name]
+
+			schemaProperty.Block = true
+			// Expect nested, so init
+			schemaProperty.Nested = models.NewSchemaProperties()
+
+			populateAllSchemaProperties(schemaProperty.Nested, r)
+		}
+
+		if r, ok := property.Elem.(*schema.Schema); ok {
+			properties.Objects[name].NestedType = strings.TrimPrefix(r.Type.String(), "Type")
 		}
 	}
 }
