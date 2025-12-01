@@ -79,6 +79,7 @@ func TestS006_Run(t *testing.T) {
 				props := models.NewDocumentProperties()
 				props.Objects["bad"] = &models.DocumentProperty{
 					Name:        "bad",
+					Required:    true,
 					Content:     "* Some malformed line without proper format",
 					ParseErrors: []string{"no field name found"},
 				}
@@ -94,6 +95,7 @@ func TestS006_Run(t *testing.T) {
 				nestedDoc := models.NewDocumentProperties()
 				nestedDoc.Objects["nested_field"] = &models.DocumentProperty{
 					Name:        "nested_field",
+					Required:    true,
 					Content:     "* `nested_field` - Field as defined below.",
 					ParseErrors: []string{"incorrectly block marked"},
 				}
@@ -130,6 +132,7 @@ func TestS006_Run(t *testing.T) {
 				props := models.NewDocumentProperties()
 				props.Objects["locaton"] = &models.DocumentProperty{
 					Name:        "locaton",
+					Optional:    true,
 					Content:     "* `locaton` - (Required) Location.",
 					ParseErrors: []string{"misspell of name from location"},
 				}
