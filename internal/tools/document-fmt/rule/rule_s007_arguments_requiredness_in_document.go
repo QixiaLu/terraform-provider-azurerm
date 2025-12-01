@@ -55,7 +55,7 @@ func (s S007) checkRequiredness(d *data.TerraformNodeData, parentPath string, sc
 	}
 
 	for name, schemaProperty := range schema.Objects {
-		if !schemaProperty.Optional && schemaProperty.Computed {
+		if schemaProperty.Computed {
 			continue
 		}
 		if name == "id" {

@@ -70,7 +70,7 @@ func (s S008) checkForceNew(
 	}
 
 	for name, schemaProperty := range schema.Objects {
-		if !schemaProperty.Optional && schemaProperty.Computed {
+		if schemaProperty.Computed {
 			continue
 		}
 		if name == "id" {

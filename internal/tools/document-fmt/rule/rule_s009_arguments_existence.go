@@ -69,8 +69,8 @@ func (s S009) checkMissingInDoc(
 	}
 
 	for name, schemaProperty := range schema.Objects {
-		// Skip computed-only properties and 'id' field
-		if !schemaProperty.Optional && schemaProperty.Computed {
+		// Skip computed properties and `id` field
+		if schemaProperty.Computed {
 			continue
 		}
 		if name == "id" {

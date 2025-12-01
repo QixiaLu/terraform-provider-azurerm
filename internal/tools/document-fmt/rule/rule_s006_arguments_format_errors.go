@@ -71,6 +71,9 @@ func (s S006) checkFormatErrors(
 
 	for name, docProperty := range documentation.Objects {
 		// Skip 'id' field
+		if !docProperty.Required && !docProperty.Optional {
+			continue
+		}
 		if name == "id" {
 			continue
 		}
