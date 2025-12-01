@@ -146,7 +146,6 @@ func (s S007) checkRequiredness(d *data.TerraformNodeData, parentPath string, sc
 	return errs
 }
 
-
 // replaceRequiredness replaces one requiredness marker with another
 func (s S007) replaceRequiredness(line, from, to string) string {
 	if strings.Contains(line, from) {
@@ -186,7 +185,7 @@ func (s S007) applyRequirednessFix(d *data.TerraformNodeData, docProperty *model
 
 	if lineIdx >= 0 && lineIdx < len(content) {
 		line := content[lineIdx]
-		fixedLine := s.replaceRequiredness(line, from ,to)
+		fixedLine := s.replaceRequiredness(line, from, to)
 		content[lineIdx] = fixedLine
 		argsSection.SetContent(content)
 		d.Document.HasChange = true

@@ -39,7 +39,7 @@ type TerraformNodeData struct {
 	DocumentArguments  *models.DocumentProperties
 	DocumentAttributes *models.DocumentProperties
 
-	ShouldNormalize bool    // whether to normalize document before parsing
+	ShouldNormalize bool // whether to normalize document before parsing
 	Errors          []error
 }
 
