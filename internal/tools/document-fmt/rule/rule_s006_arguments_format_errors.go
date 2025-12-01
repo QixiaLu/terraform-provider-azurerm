@@ -109,14 +109,15 @@ func (s S006) checkFormatErrors(
 				origLine := strings.TrimRight(docProperty.Content, "\n")
 				fixedLine := s.getFixedLine(docProperty, parseErr)
 
-				if strings.Contains(parseErr, mdparser.IncorrectlyBlockMarked) {
+				switch {
+				case strings.Contains(parseErr, mdparser.IncorrectlyBlockMarked):
 					message = fmt.Sprintf("The document incorrectly implies `%s` is a block (contains phrases like 'as defined below')", fullPath)
-				} else if strings.Contains(parseErr, "duplicate") {
+				case strings.Contains(parseErr, "duplicate"):
 					message = fmt.Sprintf("%s: `%s`", parseErr, fullPath)
-				} else if strings.Contains(parseErr, "no field name found") {
+				case strings.Contains(parseErr, "no field name found"):
 					message = fmt.Sprintf("following should be formatted as: `* `field` - (Required/Optional) Xxx...`\n  %s\n", docProperty.Content)
-				} else {
-					message = fmt.Sprintf("%s", parseErr)
+				default:
+					message = parseErr
 				}
 
 				issue := NewValidationIssue(

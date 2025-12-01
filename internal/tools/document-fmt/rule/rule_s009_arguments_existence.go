@@ -48,7 +48,7 @@ func (s S009) Run(d *data.TerraformNodeData, fix bool) []error {
 	errs = append(errs, s.checkMissingInDoc(d, "", d.SchemaProperties, d.DocumentArguments, d.DocumentArguments.BlockDefinitions, resourceType)...)
 
 	// Second pass: check documentation properties missing in schema (potential misspellings)
-	errs = append(errs, s.checkMissingInSchema(d, "", d.DocumentArguments, d.SchemaProperties, d.DocumentArguments.BlockDefinitions, resourceType)...)
+	errs = append(errs, s.checkMissingInSchema(d, "", d.DocumentArguments, d.SchemaProperties, resourceType)...)
 
 	return errs
 }
@@ -155,7 +155,6 @@ func (s S009) checkMissingInSchema(
 	parentPath string,
 	documentation *models.DocumentProperties,
 	schema *models.SchemaProperties,
-	blockDefinitions map[string]*models.DocumentProperty,
 	resourceType string,
 ) []error {
 	var errs []error
@@ -218,7 +217,7 @@ func (s S009) checkMissingInSchema(
 				s.ID(),
 				s.Name(),
 				fullPath,
-				fmt.Sprintf("S006: The document incorrectly implies `%s` is a block (contains phrases like 'as defined below')", fullPath),
+				fmt.Sprintf("The document incorrectly implies `%s` is a block (contains phrases like 'as defined below')", fullPath),
 				d.Document.Path,
 				"",
 				"",
@@ -230,8 +229,7 @@ func (s S009) checkMissingInSchema(
 		// Recursively check nested properties
 		if docProperty.Nested != nil && len(docProperty.Nested.Objects) > 0 {
 			if schemaProperty.Nested != nil {
-				errs = append(errs, s.checkMissingInSchema(d, fullPath, docProperty.Nested, schemaProperty.Nested, d.DocumentArguments.BlockDefinitions, resourceType)...)
-
+				errs = append(errs, s.checkMissingInSchema(d, fullPath, docProperty.Nested, schemaProperty.Nested, resourceType)...)
 			}
 		}
 	}

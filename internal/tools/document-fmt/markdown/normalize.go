@@ -28,7 +28,7 @@ func replaceNBSP(line string) string {
 		return false
 	}
 	var res []rune
-	for _, ch := range []rune(line) {
+	for _, ch := range line {
 		if unicode.IsSpace(ch) && !isNormalSpace(ch) {
 			res = append(res, rune(' '))
 		} else {
