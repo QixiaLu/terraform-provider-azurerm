@@ -13,22 +13,24 @@ import (
 )
 
 // Regular expressions for parsing
-var fieldReg = regexp.MustCompile("^[*-] *`(.*?)`" + ` +\- +(\(Required\)|\(Optional\))? ?(.*)`)
-var codeReg = regexp.MustCompile("`([^`]+)`")
-var blockHeadReg = regexp.MustCompile("^(an?|An?|The)[^`]+(`[a-zA-Z0-9_]+`[, and]*)+.*blocks?.*$")
-var DefaultsReg = regexp.MustCompile("[.,?;](?: *[Tt]he)? *[Dd]efaults?[^`'\".]+(?:to|is) ('[^']+'|`[^`]+`|\"[^\"]+\")[ .,]?")
-var ForceNewReg = regexp.MustCompile(` ?Changing.*forces? a [^.]*(\.|$)`)
-var partForceNewReg = regexp.MustCompile(` ?Changing.*forces? a [^.]* created when [^.]*(\.|$)`)
-var blockPropRegs = []*regexp.Regexp{
-	regexp.MustCompile("(?:[Oo]ne|[Ee]ach|more(?: \\(.*\\))?|[Tt]he|as|of|[Aa]n?) ['\"`]([^ ]+)['\"`] (?:block|object)[^.]+(?:below|above)"),
-}
-var blockTypeReg = blockPropRegs[0]
+var (
+	fieldReg = regexp.MustCompile("^[*-] *`(.*?)`" + ` +\- +(\(Required\)|\(Optional\))? ?(.*)`)
+	codeReg = regexp.MustCompile("`([^`]+)`")
+	blockHeadReg = regexp.MustCompile("^(an?|An?|The)[^`]+(`[a-zA-Z0-9_]+`[, and]*)+.*blocks?.*$")
+	defaultsReg = regexp.MustCompile("[.,?;](?: *[Tt]he)? *[Dd]efaults?[^`'\".]+(?:to|is) ('[^']+'|`[^`]+`|\"[^\"]+\")[ .,]?")
+	forceNewReg = regexp.MustCompile(` ?Changing.*forces? a [^.]*(\.|$)`)
+    partforceNewReg = regexp.MustCompile(` ?Changing.*forces? a [^.]* created when [^.]*(\.|$)`)
+	blockPropRegs = []*regexp.Regexp{
+		regexp.MustCompile("(?:[Oo]ne|[Ee]ach|more(?: \\(.*\\))?|[Tt]he|as|of|[Aa]n?) ['\"`]([^ ]+)['\"`] (?:block|object)[^.]+(?:below|above)"),
+	}
+	blockTypeReg = blockPropRegs[0]
+)
 
 // ===== Field parsing helpers =====
 
 // getDefaultValue extracts the default value from a field description line
 func getDefaultValue(line string) string {
-	if vals := DefaultsReg.FindStringSubmatch(line); len(vals) > 0 {
+	if vals := defaultsReg.FindStringSubmatch(line); len(vals) > 0 {
 		if val := vals[1]; len(val) > 2 {
 			return val[1 : len(val)-1]
 		}
@@ -38,7 +40,7 @@ func getDefaultValue(line string) string {
 
 // isForceNew determines if a field triggers resource recreation when changed
 func isForceNew(line string) bool {
-	if ForceNewReg.MatchString(line) && !partForceNewReg.MatchString(line) {
+	if forceNewReg.MatchString(line) && !partforceNewReg.MatchString(line) {
 		return true
 	}
 	return false
