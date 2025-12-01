@@ -14,13 +14,13 @@ import (
 
 // Regular expressions for parsing
 var (
-	fieldReg = regexp.MustCompile("^[*-] *`(.*?)`" + ` +\- +(\(Required\)|\(Optional\))? ?(.*)`)
-	codeReg = regexp.MustCompile("`([^`]+)`")
-	blockHeadReg = regexp.MustCompile("^(an?|An?|The)[^`]+(`[a-zA-Z0-9_]+`[, and]*)+.*blocks?.*$")
-	defaultsReg = regexp.MustCompile("[.,?;](?: *[Tt]he)? *[Dd]efaults?[^`'\".]+(?:to|is) ('[^']+'|`[^`]+`|\"[^\"]+\")[ .,]?")
-	forceNewReg = regexp.MustCompile(` ?Changing.*forces? a [^.]*(\.|$)`)
-    partforceNewReg = regexp.MustCompile(` ?Changing.*forces? a [^.]* created when [^.]*(\.|$)`)
-	blockPropRegs = []*regexp.Regexp{
+	fieldReg        = regexp.MustCompile("^[*-] *`(.*?)`" + ` +\- +(\(Required\)|\(Optional\))? ?(.*)`)
+	codeReg         = regexp.MustCompile("`([^`]+)`")
+	blockHeadReg    = regexp.MustCompile("^(an?|An?|The)[^`]+(`[a-zA-Z0-9_]+`[, and]*)+.*blocks?.*$")
+	defaultsReg     = regexp.MustCompile("[.,?;](?: *[Tt]he)? *[Dd]efaults?[^`'\".]+(?:to|is) ('[^']+'|`[^`]+`|\"[^\"]+\")[ .,]?")
+	forceNewReg     = regexp.MustCompile(` ?Changing.*forces? a [^.]*(\.|$)`)
+	partforceNewReg = regexp.MustCompile(` ?Changing.*forces? a [^.]* created when [^.]*(\.|$)`)
+	blockPropRegs   = []*regexp.Regexp{
 		regexp.MustCompile("(?:[Oo]ne|[Ee]ach|more(?: \\(.*\\))?|[Tt]he|as|of|[Aa]n?) ['\"`]([^ ]+)['\"`] (?:block|object)[^.]+(?:below|above)"),
 	}
 	blockTypeReg = blockPropRegs[0]
