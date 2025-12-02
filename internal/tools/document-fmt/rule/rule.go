@@ -51,3 +51,18 @@ var Registration = map[string]Rule{
 	S008{}.ID(): S008{}, // Arguments ForceNew
 	S009{}.ID(): S009{}, // Arguments Existence
 }
+
+// RulesRequiringPackageLoad contains rule IDs that need package loading and API analysis
+// These rules require expensive package loading and SSA analysis
+var RulesRequiringPackageLoad = map[string]bool{
+	"S001": true, // API Section validation needs API data from loaded packages
+}
+
+func ShouldLoadPackages(ruleIDs []string) bool {
+	for _, ruleID := range ruleIDs {
+		if RulesRequiringPackageLoad[ruleID] {
+			return true
+		}
+	}
+	return false
+}

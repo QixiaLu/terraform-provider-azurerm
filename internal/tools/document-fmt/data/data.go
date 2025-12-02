@@ -86,10 +86,17 @@ func newTerraformNodeData(fs afero.Fs, providerDir string, service Service, name
 	return &result, nil
 }
 
-func GetAllTerraformNodeData(fs afero.Fs, providerDir string, serviceName string, resourceName string, shouldNormalize bool) []*TerraformNodeData {
+func GetAllTerraformNodeData(fs afero.Fs, providerDir string, serviceName string, resourceName string, shouldNormalize bool, shouldLoadPackages bool) []*TerraformNodeData {
 	result := make([]*TerraformNodeData, 0)
 
-	pkgData := loadPackages(providerDir)
+	// Only load packages if needed by the selected rules
+	var pkgData *packageData
+	if shouldLoadPackages {
+		log.WithField("reason", "required by selected rules").Info("loading packages for API analysis")
+		pkgData = loadPackages(providerDir)
+	} else {
+		log.Info("skipping package loading - no rules require it")
+	}
 
 	for _, s := range provider.SupportedTypedServices() {
 		service, err := NewService(fs, providerDir, s, s.Name())
@@ -108,7 +115,9 @@ func GetAllTerraformNodeData(fs afero.Fs, providerDir string, serviceName string
 			}
 		}
 
-		service.APIsByResource = findAPIsForTypedResources(*pkgData, service)
+		if pkgData != nil {
+			service.APIsByResource = findAPIsForTypedResources(*pkgData, service)
+		}
 
 		for _, r := range s.DataSources() {
 			name := r.ResourceType()
@@ -171,7 +180,9 @@ func GetAllTerraformNodeData(fs afero.Fs, providerDir string, serviceName string
 			}
 		}
 
-		service.APIsByResource = findAPIsForUntypedResources(*pkgData, service)
+		if pkgData != nil {
+			service.APIsByResource = findAPIsForUntypedResources(*pkgData, service)
+		}
 
 		for name, r := range s.SupportedDataSources() {
 			rd, err := newTerraformNodeData(fs, providerDir, *service, name, ResourceTypeData, r)
