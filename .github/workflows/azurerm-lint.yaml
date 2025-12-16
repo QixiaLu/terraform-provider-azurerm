@@ -1,0 +1,30 @@
+name: AzureRM Linter
+
+on:
+  pull_request:
+    paths:
+      - 'internal/services/**'
+
+jobs:
+  lint:
+    name: Run AzureRM Linter
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: ./.go-version
+
+      - name: Install azurerm-linter
+        run: |
+          git clone https://github.com/qixialu/azurerm-linter.git /tmp/azurerm-linter
+          cd /tmp/azurerm-linter
+          go build -o /usr/local/bin/azurerm-linter
+
+      - name: Run linter
+        run: ./azurerm-linter -use-git-repo=false ./internal/services/...
