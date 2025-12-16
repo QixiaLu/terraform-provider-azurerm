@@ -27,6 +27,11 @@ jobs:
           git checkout feat-rules
           go build -o /usr/local/bin/azurerm-linter
 
+      - name: Generate git diff
+        run: |
+          git diff HEAD^1 HEAD > /tmp/changes.diff
+          echo "Generated diff file with $(wc -l < /tmp/changes.diff) lines"
+
       - name: Get changed packages
         id: changed-packages
         run: |
@@ -43,11 +48,6 @@ jobs:
           echo "Changed packages: $packages"
           echo "packages=$packages" >> $GITHUB_OUTPUT
 
-      - name: Debug changed packages
-        run: |
-          echo "Changed packages: '${{ steps.changed-packages.outputs.packages }}'"
-          echo "Number of packages: $(echo '${{ steps.changed-packages.outputs.packages }}' | wc -w)"
-
       - name: Run linter
         if: steps.changed-packages.outputs.packages != ''
-        run: azurerm-linter -use-git-repo=false ${{ steps.changed-packages.outputs.packages }}
+        run: azurerm-linter -diff-file=/tmp/changes.diff ${{ steps.changed-packages.outputs.packages }}
