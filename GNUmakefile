@@ -74,6 +74,9 @@ gencheck: generate
 tflint:
 	./scripts/run-tflint.sh
 
+azurermlint:
+	./scripts/run-azurermlint.sh
+
 whitespace:
 	@echo "==> Fixing source code with whitespace linter..."
 	golangci-lint run ./... --no-config --disable-all --enable=whitespace --fix
@@ -154,6 +157,6 @@ schemagen:
 resource-counts:
 	go test -v ./internal/provider -run=TestProvider_counts
 
-pr-check: generate build test lint tflint website-lint
+pr-check: generate build test lint tflint website-lint azurermlint
 
 .PHONY: build test testacc vet fmt fmtcheck errcheck pr-check scaffold-website test-compile website website-test validate-examples resource-counts

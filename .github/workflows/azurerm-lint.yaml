@@ -1,31 +1,32 @@
-name: AzureRM Linter
+name: Terraform Schema Linting
+
+permissions:
+  contents: read
 
 on:
   pull_request:
+    types: ['opened', 'synchronize']
     paths:
-      - 'internal/services/**'
+      - '**.go'
+
+concurrency:
+  group: 'azurermlint-${{ github.head_ref }}'
+  cancel-in-progress: true
 
 jobs:
-  lint:
-    name: Run AzureRM Linter
-    runs-on: ubuntu-latest
+  azurermlint:
+    runs-on: custom-linux-medium
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 2
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
         with:
           go-version-file: ./.go-version
-
+      - run: bash scripts/gogetcookie.sh
       - name: Install azurerm-linter
         run: |
           git clone https://github.com/qixialu/azurerm-linter.git /tmp/azurerm-linter
           cd /tmp/azurerm-linter
           git checkout feat-rules
           go build -o /usr/local/bin/azurerm-linter
-
-      - name: Run linter
-        run: azurerm-linter -use-git-repo=false ./internal/services/...
+      - run: make tools
+      - run: make azurermlint
