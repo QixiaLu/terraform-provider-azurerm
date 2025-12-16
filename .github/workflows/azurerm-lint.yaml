@@ -24,8 +24,7 @@ jobs:
         run: |
           git clone https://github.com/qixialu/azurerm-linter.git /tmp/azurerm-linter
           cd /tmp/azurerm-linter
-          go mod init github.com/qixialu/azurerm-linter
-          go mod tidy
+          git checkout feat-rules
           go build -o /usr/local/bin/azurerm-linter
 
       - name: Run linter
