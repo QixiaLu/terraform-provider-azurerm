@@ -30,7 +30,6 @@ jobs:
       - name: Get changed packages
         id: changed-packages
         run: |
-          # 获取变更的 Go 文件
           changed_files=$(git diff --name-only --diff-filter=ACMRT HEAD^1 HEAD | grep '^internal/services/.*\.go$' || true)
           
           if [ -z "$changed_files" ]; then
@@ -39,8 +38,7 @@ jobs:
             exit 0
           fi
           
-          # 提取唯一的包路径
-          packages=$(echo "$changed_files" | xargs -I {} dirname {} | sort -u | sed 's|^|./|' | tr '\n' ' ')
+          packages=$(echo "$changed_files" | sed 's|^\(internal/services/[^/]*\).*|\1|' | sort -u | sed 's|^|./|' | tr '\n' ' ')
           
           echo "Changed packages: $packages"
           echo "packages=$packages" >> $GITHUB_OUTPUT
