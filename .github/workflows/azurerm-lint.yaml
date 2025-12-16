@@ -15,28 +15,18 @@ concurrency:
 
 jobs:
   azurermlint:
-    runs-on: custom-linux-medium
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      
       - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
         with:
           go-version-file: ./.go-version
-      
       - run: bash scripts/gogetcookie.sh
-      
       - name: Install azurerm-linter
         run: |
-          set -e
           git clone https://github.com/qixialu/azurerm-linter.git /tmp/azurerm-linter
           cd /tmp/azurerm-linter
           git checkout feat-rules
-          
-          go install
-          
-      - name: Verify linter is available
-        run: |
-          which azurerm-linter || echo "WARNING: azurerm-linter not in PATH"
-          azurerm-linter --version || azurerm-linter --help || echo "Linter installed"
-          
+          go build -o /usr/local/bin/azurerm-linter
+      - run: make tools
       - run: make azurermlint
