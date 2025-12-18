@@ -19,7 +19,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
-          fetch-depth: 0  # 需要完整历史来做 diff
+          fetch-depth: 0
 
       - name: Run Semgrep on changed files only
         run: |
@@ -27,7 +27,4 @@ jobs:
           
           semgrep \
             --config .semgrep/ \
-            --baseline-commit origin/${{ github.base_ref }} \
-            --sarif \
-            --output semgrep.sarif \
             .
