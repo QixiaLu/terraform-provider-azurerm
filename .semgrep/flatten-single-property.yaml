@@ -1,0 +1,55 @@
+rules:
+  - id: flatten-single-property-block
+    patterns:
+      # 匹配 TypeList/TypeSet with MaxItems: 1
+      - pattern: |
+          "$FIELD": {
+            Type: schema.$TYPE,
+            ...
+            MaxItems: 1,
+            ...
+            Elem: &schema.Resource{
+              Schema: map[string]*schema.Schema{
+                ...
+              },
+            },
+            ...
+          }
+      # 检查是否只有一个子属性（这个很难用 Semgrep 精确检测，所以只做提醒）
+    message: |
+      Consider flattening this property with MaxItems: 1 that contains only 1 nested sub-property.
+      If flattening is not possible, add an inline comment explaining why.
+    languages: [go]
+    severity: INFO
+    metadata:
+      category: best-practice
+      description: |
+        Properties with MaxItems: 1 and only one nested sub-property should be flattened
+        to improve the API design. If flattening is not possible (e.g., API constraints),
+        add a comment explaining the reason.
+      examples:
+        - |
+          // Bad (should be flattened)
+          "config": {
+            Type:     schema.TypeList,
+            MaxItems: 1,
+            Elem: &schema.Resource{
+              Schema: map[string]*schema.Schema{
+                "name": {...},  // Only one property
+              },
+            },
+          }
+          
+          // Good (flattened)
+          "config_name": {
+            Type: schema.TypeString,
+            ...
+          }
+          
+          // Good (with explanation)
+          // NOTE: Cannot flatten due to API structure requirement
+          "config": {
+            Type:     schema.TypeList,
+            MaxItems: 1,
+            ...
+          }

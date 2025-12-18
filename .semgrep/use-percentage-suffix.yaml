@@ -1,0 +1,23 @@
+rules:
+  - id: use-percentage-suffix
+    patterns:
+      - pattern-regex: '"[a-z_]*in_percent[a-z_]*":\s*\{'
+    message: |
+      Use '_percentage' suffix rather than 'in_percent' for percentage field names.
+      Example: 'cpu_percentage' instead of 'cpu_in_percent'
+    languages: [go]
+    severity: WARNING
+    metadata:
+      category: naming-convention
+      description: |
+        Field names representing percentages should use the '_percentage' suffix
+        instead of 'in_percent' for consistency across the provider.
+      fix-examples:
+        - |
+          // Bad
+          "cpu_in_percent": {...}
+          "memory_in_percent": {...}
+          
+          // Good
+          "cpu_percentage": {...}
+          "memory_percentage": {...}
