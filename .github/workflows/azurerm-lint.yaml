@@ -50,4 +50,4 @@ jobs:
           echo "packages=$packages" >> $GITHUB_OUTPUT
       - name: Run linter
         if: steps.changed-packages.outputs.packages != ''
-        run: azurerm-linter -diff-file=/tmp/changes.diff ${{ steps.changed-packages.outputs.packages }}
+        run: azurerm-linter -diff-file=/tmp/changes.diff internal/services/network/...
