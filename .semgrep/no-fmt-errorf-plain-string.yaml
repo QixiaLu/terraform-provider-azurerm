@@ -1,0 +1,17 @@
+rules:
+  - id: no-fmt-errorf-plain-string
+    patterns:
+      - pattern: fmt.Errorf($MSG)
+      - metavariable-regex:
+          metavariable: $MSG
+          regex: '^"[^%]*"$'
+    message: Use errors.New() for plain strings instead of fmt.Errorf()
+    languages: [go]
+    severity: WARNING
+    metadata:
+      category: best-practice
+      description: |
+        fmt.Errorf() should only be used when formatting is needed.
+        For plain string errors, use errors.New() instead as it's more efficient.
+      fix: Replace fmt.Errorf("message") with errors.New("message")
+    fix: errors.New($MSG)
