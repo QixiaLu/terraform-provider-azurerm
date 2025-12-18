@@ -21,10 +21,8 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Run Semgrep on changed files only
-        run: |
-          git fetch origin ${{ github.base_ref }}
-          
+      - name: Run Semgrep
+        run: |          
           semgrep \
             --config .semgrep/ \
             .
