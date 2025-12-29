@@ -27,7 +27,6 @@ jobs:
         run: |
           git clone https://github.com/qixialu/azurerm-linter.git /tmp/azurerm-linter
           cd /tmp/azurerm-linter
-          git checkout feat-rules
           go build -o /usr/local/bin/azurerm-linter
       - name: Generate git diff
         run: |
@@ -50,4 +49,4 @@ jobs:
           echo "packages=$packages" >> $GITHUB_OUTPUT
       - name: Run linter
         if: steps.changed-packages.outputs.packages != ''
-        run: azurerm-linter -diff-file=/tmp/changes.diff ./internal/services/...
+        run: azurerm-linter --diff=/tmp/changes.diff ./internal/services/...
