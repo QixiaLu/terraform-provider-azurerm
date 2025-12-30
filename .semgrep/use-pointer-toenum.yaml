@@ -1,0 +1,40 @@
+rules:
+  - id: use-pointer-toenum
+    languages: [go]
+    message: Use pointer.ToEnum[$TYPE](...) instead of pointer.To($TYPE(...)) for Azure SDK enum types
+    severity: WARNING
+    patterns:
+      - pattern: pointer.To($TYPE($VALUE))
+      - metavariable-pattern:
+          metavariable: $TYPE
+          patterns:
+            - pattern-regex: '^[A-Z][a-zA-Z0-9]*$'
+      - metavariable-pattern:
+          metavariable: $TYPE
+          patterns:
+            - pattern-not: string
+            - pattern-not: int
+            - pattern-not: int32
+            - pattern-not: int64
+            - pattern-not: float32
+            - pattern-not: float64
+            - pattern-not: bool
+            - pattern-not: byte
+            - pattern-not: rune
+      - pattern-inside: |
+          import $PKG
+          ...
+      - metavariable-pattern:
+          metavariable: $PKG
+          pattern-regex: '.*github\.com/hashicorp/go-azure-sdk.*'
+    fix: pointer.ToEnum[$TYPE]($VALUE)
+    paths:
+      include:
+        - internal/services/**/*.go
+      exclude:
+        - "**/*_test.go"
+        - "**/client/*.go"
+        - "**/migration/*.go"
+        - "**/parse/*.go"
+        - "**/validate/*.go"
+        - "**/models/*.go"

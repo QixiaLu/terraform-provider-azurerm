@@ -1,0 +1,21 @@
+rules:
+  - id: use-pointer-from
+    languages: [go]
+    message: Use pointer.From($PTR) instead of manual nil check and dereferencing (only when default is zero value)
+    severity: WARNING
+    patterns:
+      - pattern: |
+          $VAR := $ZERO
+          ...
+          if $PTR != nil {
+            $VAR = *$PTR
+          }
+      - metavariable-pattern:
+          metavariable: $ZERO
+          patterns:
+            - pattern-either:
+                - pattern: "false"
+                - pattern: "0"
+                - pattern: '""'
+                - pattern: "nil"
+    fix: $VAR := pointer.From($PTR)
