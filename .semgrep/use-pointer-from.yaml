@@ -2,6 +2,9 @@ rules:
   - id: use-pointer-from
     languages: [go]
     message: Use pointer.From($PTR) instead of manual nil check and dereferencing (only when default is zero value)
+    paths:
+      include:
+        - internal/services/**/*.go
     severity: WARNING
     patterns:
       - pattern: |

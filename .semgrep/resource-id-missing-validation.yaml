@@ -2,7 +2,10 @@ rules:
   - id: resource-id-missing-validation
     languages: [go]
     severity: WARNING
-    message: Resource ID fields ending with _id must include ValidateFunc.
+    message: String fields must include ValidateFunc.
+    paths:
+      include:
+        - internal/services/**/*.go
     patterns:
       - pattern-inside: "Schema: map[string]*schema.Schema{ ... }"
       - pattern: |

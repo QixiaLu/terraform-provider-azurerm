@@ -3,6 +3,9 @@ rules:
     languages: [go]
     severity: WARNING
     message: Use '_percentage' suffix instead of '_in_percent' for percentage fields
+    paths:
+      include:
+        - internal/services/**/*.go
     patterns:
       - pattern-inside: "Schema: map[string]*schema.Schema{ ... }"
       - pattern-regex: '\"[a-z_]+_in_percent\":\s*\{'

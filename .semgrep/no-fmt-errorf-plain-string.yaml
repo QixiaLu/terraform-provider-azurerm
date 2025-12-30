@@ -6,6 +6,9 @@ rules:
           metavariable: $MSG
           regex: '^"[^%]*"$'
     message: Use errors.New() for plain strings instead of fmt.Errorf()
+    paths:
+      include:
+        - internal/services/**/*.go
     languages: [go]
     severity: WARNING
     metadata:
