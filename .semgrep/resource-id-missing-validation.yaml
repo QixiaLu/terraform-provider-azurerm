@@ -1,0 +1,24 @@
+rules:
+  - id: resource-id-missing-validation
+    languages: [go]
+    severity: WARNING
+    message: Resource ID fields ending with _id must include ValidateFunc.
+    patterns:
+      - pattern-inside: "Schema: map[string]*schema.Schema{ ... }"
+      - pattern: |
+          {
+            Type: schema.TypeString,
+            ...
+          }
+      - pattern-not: |
+          {
+            ...,
+            Computed: true,
+            ...
+          }
+      - pattern-not: |
+          {
+            ...,
+            ValidateFunc: $_,
+            ...
+          }

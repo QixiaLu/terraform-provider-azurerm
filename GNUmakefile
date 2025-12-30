@@ -74,8 +74,11 @@ gencheck: generate
 tflint:
 	./scripts/run-tflint.sh
 
-azurermlint:
-	./scripts/run-azurermlint.sh
+resource-lint:
+	@echo "==> Installing resource-lint..."
+	@cd internal/tools/resource-lint && go install .
+	@echo "==> Running resource linter..."
+	@resource-lint $(RESOURCE_LINT_ARGS)
 
 whitespace:
 	@echo "==> Fixing source code with whitespace linter..."
@@ -157,6 +160,6 @@ schemagen:
 resource-counts:
 	go test -v ./internal/provider -run=TestProvider_counts
 
-pr-check: generate build test lint tflint website-lint azurermlint
+pr-check: generate build test lint tflint website-lint azurermlint resource-lint
 
-.PHONY: build test testacc vet fmt fmtcheck errcheck pr-check scaffold-website test-compile website website-test validate-examples resource-counts
+.PHONY: build test testacc vet fmt fmtcheck errcheck pr-check scaffold-website test-compile website website-test validate-examples resource-counts resource-lint
