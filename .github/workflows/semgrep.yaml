@@ -21,11 +21,15 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Fix Git Ownership
+        run: git config --global --add safe.directory $GITHUB_WORKSPACE
+
       - name: Run Semgrep (PR diff only)
         run: |
           git fetch origin ${{ github.base_ref }}
           BASE_COMMIT=$(git rev-parse origin/${{ github.base_ref }})
 
+          # Display results in human-readable format
           semgrep \
             --config .semgrep/ \
             --baseline-commit $BASE_COMMIT \
