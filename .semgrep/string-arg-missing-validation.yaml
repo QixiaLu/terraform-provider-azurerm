@@ -11,7 +11,7 @@ rules:
           - pattern-inside: "map[string]*$SCHEMA{ ... }"
       - pattern: |
           {
-            Type: schema.TypeString,
+            Type: $SDK.TypeString,
             ...
           }
       - pattern-not: |
