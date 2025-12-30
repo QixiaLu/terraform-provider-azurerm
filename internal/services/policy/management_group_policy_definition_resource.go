@@ -55,7 +55,6 @@ func (r ManagementGroupPolicyDefinitionResource) Arguments() map[string]*plugins
 		"display_name": {
 			Type:         pluginsdk.TypeString,
 			Required:     true,
-			ValidateFunc: validation.StringIsNotEmpty,
 		},
 
 		"mode": {
@@ -92,17 +91,17 @@ func (r ManagementGroupPolicyDefinitionResource) Arguments() map[string]*plugins
 
 		"metadata": metadataSchema(),
 
-		"parameters": {
-			Type:             pluginsdk.TypeString,
-			Optional:         true,
-			ValidateFunc:     validation.StringIsJSON,
-			DiffSuppressFunc: pluginsdk.SuppressJsonDiff,
-		},
-
 		"policy_rule": {
 			Type:             pluginsdk.TypeString,
 			Optional:         true,
 			Computed:         true,
+			ValidateFunc:     validation.StringIsJSON,
+			DiffSuppressFunc: pluginsdk.SuppressJsonDiff,
+		},
+
+		"parameters": {
+			Type:             pluginsdk.TypeString,
+			Optional:         true,
 			ValidateFunc:     validation.StringIsJSON,
 			DiffSuppressFunc: pluginsdk.SuppressJsonDiff,
 		},
