@@ -25,6 +25,5 @@ jobs:
         run: |
           semgrep \
             --config .semgrep/ \
-            --baseline-commit HEAD^1 \
             --error \
             .
