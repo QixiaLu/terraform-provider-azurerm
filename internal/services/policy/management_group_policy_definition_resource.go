@@ -102,6 +102,7 @@ func (r ManagementGroupPolicyDefinitionResource) Arguments() map[string]*plugins
 		"policy_rule": {
 			Type:             pluginsdk.TypeString,
 			Optional:         true,
+			Computed:         true,
 			ValidateFunc:     validation.StringIsJSON,
 			DiffSuppressFunc: pluginsdk.SuppressJsonDiff,
 		},
@@ -229,7 +230,13 @@ func (r ManagementGroupPolicyDefinitionResource) Read() sdk.ResourceFunc {
 			if model := resp.Model; model != nil {
 				if props := model.Properties; props != nil {
 					state.PolicyType = string(pointer.From(props.PolicyType))
-					state.Mode = pointer.From(props.Mode)
+
+					mode := ""
+					if props.Mode != nil {
+						mode = *props.Mode
+					}
+					state.Mode = mode
+
 					state.DisplayName = pointer.From(props.DisplayName)
 					state.Description = pointer.From(props.Description)
 

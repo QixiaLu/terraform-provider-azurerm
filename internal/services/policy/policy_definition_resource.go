@@ -499,15 +499,15 @@ func (r PolicyDefinitionResource) Arguments() map[string]*pluginsdk.Schema {
 		},
 
 		"metadata": metadataSchema(),
-
-		"parameters": {
+		
+		"policy_rule": {
 			Type:             pluginsdk.TypeString,
 			Optional:         true,
 			ValidateFunc:     validation.StringIsJSON,
 			DiffSuppressFunc: pluginsdk.SuppressJsonDiff,
 		},
 
-		"policy_rule": {
+		"parameters": {
 			Type:             pluginsdk.TypeString,
 			Optional:         true,
 			ValidateFunc:     validation.StringIsJSON,
@@ -573,7 +573,7 @@ func (r PolicyDefinitionResource) Create() sdk.ResourceFunc {
 			if model.PolicyRule != "" {
 				policyRule, err := pluginsdk.ExpandJsonFromString(model.PolicyRule)
 				if err != nil {
-					return fmt.Errorf("expanding `policy_rule`: %+v", err)
+					return fmt.Errorf("expanding `policy_rule`", err)
 				}
 
 				var iPolicyRule interface{} = policyRule
