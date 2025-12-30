@@ -7,7 +7,8 @@ rules:
       include:
         - internal/services/**/*.go
     patterns:
-      - pattern-inside: "Schema: map[string]*schema.Schema{ ... }"
+      - pattern-either:
+          - pattern-inside: "map[string]*$SCHEMA{ ... }"
       - pattern: |
           {
             Type: schema.TypeString,

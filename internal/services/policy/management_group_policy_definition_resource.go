@@ -405,7 +405,7 @@ func (r ManagementGroupPolicyDefinitionResource) CustomizeDiff() sdk.ResourceFun
 
 					newParameters, err := expandParameterDefinitionsValueForPolicyDefinition(newParametersString)
 					if err != nil {
-						return fmt.Errorf("expanding JSON for `parameters`: %+v", err)
+						return fmt.Errorf("expanding JSON for `parameters`")
 					}
 
 					if len(*newParameters) < len(*oldParameters) {
