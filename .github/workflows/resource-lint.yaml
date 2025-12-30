@@ -28,19 +28,4 @@ jobs:
         run: |
           git diff HEAD^1 HEAD > /tmp/changes.diff
           echo "Generated diff file with $(wc -l < /tmp/changes.diff) lines"
-      - name: Get changed packages
-        id: changed-packages
-        run: |
-          changed_files=$(git diff --name-only --diff-filter=ACMRT HEAD^1 HEAD | grep '^internal/services/.*\.go$' || true)
-          
-          if [ -z "$changed_files" ]; then
-            echo "No Go files changed in internal/services/"
-            echo "packages=" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-          
-          packages=$(echo "$changed_files" | sed 's|^\(internal/services/[^/]*\).*|\1|' | sort -u | sed 's|^|./|' | tr '\n' ' ')
-          
-          echo "Changed packages: $packages"
-          echo "packages=$packages" >> $GITHUB_OUTPUT
-      - run: make resource-lint RESOURCE_LINT_ARGS="$RESOURCE_LINT_ARGS"
+      - run: make resource-lint RESOURCE_LINT_ARGS="-diff=/tmp/changes.diff"
