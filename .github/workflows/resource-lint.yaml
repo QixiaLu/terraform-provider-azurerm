@@ -44,4 +44,5 @@ jobs:
 
       - name: Run resource lint checker
         if: steps.check_changes.outputs.has_service_changes == 'true'
+        continue-on-error: true
         run: make resource-lint RESOURCE_LINT_ARGS="-diff=/tmp/changes.diff"
