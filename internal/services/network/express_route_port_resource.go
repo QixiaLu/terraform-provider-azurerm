@@ -65,7 +65,6 @@ var expressRoutePortSchema = &pluginsdk.Schema{
 			"macsec_cak_keyvault_secret_id": {
 				Type:         pluginsdk.TypeString,
 				Optional:     true,
-				ValidateFunc: validation.StringIsNotEmpty,
 			},
 			"macsec_sci_enabled": {
 				Type:     pluginsdk.TypeBool,

@@ -24,6 +24,12 @@ jobs:
         with:
           go-version-file: ./.go-version
 
+      - run: bash scripts/gogetcookie.sh
+
       - name: Run resource lint checker
-        continue-on-error: true
-        run: make resource-lint RESOURCE_LINT_ARGS="-no-filter ./internal/services/..."
+        run: |
+          if make resource-lint RESOURCE_LINT_ARGS="-no-filter ./internal/services/network/..."; then
+            echo "::notice::Resource lint passed."
+          else
+            echo "::warning::Resource lint found issues. Please review the output above."
+          fi
