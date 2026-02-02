@@ -20,10 +20,7 @@ type Config struct {
 	ListChecks bool
 
 	// Loader options
-	All        bool
-	RemoteName string
-	BaseBranch string
-	DiffFile   string
+	DiffFile string
 
 	// Internal: flagSet for help printing
 	flagSet *flag.FlagSet
@@ -41,10 +38,7 @@ func ParseFlags() (*Config, error) {
 	fs.BoolVar(&cfg.ListChecks, "list", false, "list all available checks")
 
 	// Loader flags
-	fs.BoolVar(&cfg.All, "all", false, "check all issues in the package, disable change filtering")
-	fs.StringVar(&cfg.RemoteName, "remote", "", "git remote name (auto-detect: origin > upstream)")
-	fs.StringVar(&cfg.BaseBranch, "base", "", "base branch (auto-detect from git config or 'main')")
-	fs.StringVar(&cfg.DiffFile, "diff", "", "read diff from file instead of git")
+	fs.StringVar(&cfg.DiffFile, "diff", "", "read diff from file to filter issues to changed lines only")
 
 	fs.Usage = func() {
 		cfg.PrintHelp()
@@ -68,8 +62,8 @@ Usage:
 
 Examples:
   go run ./internal/tools/resource-lint ./internal/services/compute/...
-  go run ./internal/tools/resource-lint --diff=changes.txt
-  go run ./internal/tools/resource-lint --all ./internal/services/...
+  go run ./internal/tools/resource-lint ./internal/services/...
+  go run ./internal/tools/resource-lint --diff=changes.txt ./internal/services/...
 
 Flags:`)
 	c.flagSet.PrintDefaults()

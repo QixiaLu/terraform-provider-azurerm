@@ -38,40 +38,28 @@ func NewRunner(cfg *Config) *Runner {
 // Run executes the linter and returns an exit code
 func (r *Runner) Run(ctx context.Context) ExitCode {
 	loaderOpts := loader.LoaderOptions{
-		All:        r.Config.All,
-		RemoteName: r.Config.RemoteName,
-		BaseBranch: r.Config.BaseBranch,
-		DiffFile:   r.Config.DiffFile,
+		DiffFile: r.Config.DiffFile,
 	}
 
 	_, err := loader.LoadChanges(loaderOpts)
 	if err != nil {
-		log.Printf("Warning: failed to load changed lines filter: %v", err)
+		log.Printf("Error: failed to load diff file: %v", err)
+		return ExitError
 	}
 
-	// Determine package patterns to analyze
-	patterns := r.Config.Patterns
+	// Log diff file stats if enabled
 	if loader.IsEnabled() {
 		files, lines := loader.GetStats()
-		log.Printf("Changed lines filter: tracking %d files with %d changed lines", files, lines)
-
-		// If change tracking is enabled and no patterns specified, use changed packages
-		if len(r.Config.Patterns) == 0 {
-			changedPackages := loader.GetChangedPackages()
-			if len(changedPackages) > 0 {
-				patterns = changedPackages
-				log.Printf("Auto-detected %d changed packages:", len(patterns))
-				for _, pkg := range patterns {
-					log.Printf("  %s", pkg)
-				}
-			}
-		}
+		log.Printf("Diff filter: tracking %d files with %d changed lines", files, lines)
 	}
 
 	// Validate we have patterns to analyze
+	patterns := r.Config.Patterns
 	if len(patterns) == 0 {
-		log.Println("No valid service package to analyze")
-		return ExitSuccess
+		log.Println("Error: no package patterns specified")
+		log.Println("Usage: go run ./internal/tools/resource-lint <package patterns>")
+		log.Println("Example: go run ./internal/tools/resource-lint ./internal/services/compute/...")
+		return ExitError
 	}
 
 	log.Printf("Loading packages...")

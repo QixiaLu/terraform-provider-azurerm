@@ -5,14 +5,11 @@ package loader
 
 import (
 	"bufio"
-	"fmt"
 	"log"
 	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
-
-	"github.com/go-git/go-git/v5"
 )
 
 const servicePathPrefix = "internal/services/"
@@ -41,57 +38,32 @@ func NewChangeSet() *ChangeSet {
 	}
 }
 
-// ChangeLoader is an interface for loading git changes from different sources
+// ChangeLoader is an interface for loading changes from different sources
 type ChangeLoader interface {
 	Load() (*ChangeSet, error)
 }
 
 // LoaderOptions holds configuration for change loading
 type LoaderOptions struct {
-	All        bool
-	RemoteName string
-	BaseBranch string
-	DiffFile   string
+	DiffFile string
 }
 
-// LoadChanges determines the appropriate ChangeLoader based on options
-// Returns nil if filtering is disabled or not applicable
+// LoadChanges determines the appropriate ChangeLoader based on options.
+// By default (no diff file), all issues in packages are reported.
+// Use --diff to filter issues to only changed lines.
 func LoadChanges(opts LoaderOptions) (*ChangeSet, error) {
-	// Check if user explicitly disabled filtering
-	if opts.All {
-		log.Println("Checking all issues in package (--all)")
+	// If no diff file specified, report all issues (no filtering)
+	if opts.DiffFile == "" {
+		log.Println("Checking all issues in packages")
 		return nil, nil
 	}
 
-	var loader ChangeLoader
+	log.Printf("Using diff file: %s", opts.DiffFile)
+	loader := &DiffFileLoader{filePath: opts.DiffFile}
 
-	switch {
-	case opts.DiffFile != "":
-		log.Printf("Using diff file: %s", opts.DiffFile)
-		loader = &DiffFileLoader{filePath: opts.DiffFile}
-	default:
-		if _, err := git.PlainOpen("."); err == nil {
-			log.Println("Using local git diff mode")
-			loader = &LocalGitLoader{
-				remoteName: opts.RemoteName,
-				baseBranch: opts.BaseBranch,
-			}
-		} else {
-			return nil, fmt.Errorf("not in a git repository. Please run from a git repository, use --diff to provide a diff file, or use --all to report issues on all lines")
-		}
-	}
-
-	var cs *ChangeSet
-	var err error
-
-	if loader != nil {
-		cs, err = loader.Load()
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		// Return empty ChangeSet if no loader is selected
-		cs = NewChangeSet()
+	cs, err := loader.Load()
+	if err != nil {
+		return nil, err
 	}
 
 	// Set global ChangeSet for package-level functions

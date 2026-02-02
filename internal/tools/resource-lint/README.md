@@ -20,7 +20,7 @@ For additional information about each check, see the documentation in the passes
 
 | Check | Description | Comments |
 |-------|-------------|----------|
-| AZNR001 | check for Schema field ordering | When git filter is on, this analyzer only runs on newly created resources/data sources |
+| AZNR001 | check for Schema field ordering | This analyzer only runs on newly created resources/data sources (when using --diff) |
 | AZNR002 | check for top-level updatable arguments are included in Update func | This analyzer currently only runs on typed resources |
 | AZNR003 | check that `expand*`/`flatten*` functions are defined as receiver methods | This analyzer currently only runs on typed resources/data sources |
 
@@ -50,31 +50,25 @@ For additional information about each check, see the documentation in the passes
 ```bash
 # Run from the terraform-provider-azurerm root directory
 
-# Check your local branch changes (auto-detect changed lines and packages)
-go run ./internal/tools/resource-lint
-
-# Check from a diff file
-go run ./internal/tools/resource-lint --diff=changes.txt
-
-# Check specific packages
+# Check all issues in specific packages
 go run ./internal/tools/resource-lint ./internal/services/compute/...
 
-# Check all issues in packages (no filtering)
-go run ./internal/tools/resource-lint --all ./internal/services/...
+# Check all services
+go run ./internal/tools/resource-lint ./internal/services/...
+
+# Filter issues to changed lines only (using a diff file)
+go run ./internal/tools/resource-lint --diff=changes.txt ./internal/services/...
 ```
 
 ### Options
 
 ```bash
---diff=<file>      # Read diff from file instead of git
---all              # Check all issues in packages (not just changes)
---remote=<name>    # Specify git remote (default: auto-detect origin/upstream)
---base=<branch>    # Specify base branch (default: auto-detect from git config or 'main')
+--diff=<file>      # Filter issues to changed lines only (from diff file)
 --list             # List all available checks
 --help             # Show help
 ```
 
-**Note**: By default, all code is analyzed but only issues on changed lines are reported. Use `--all` to report issues on all lines.
+**Note**: By default, all issues in the specified packages are reported. Use `--diff` to filter issues to only changed lines.
 
 ### Output
 
@@ -89,13 +83,8 @@ Results are printed to **standard output**:
 #### Example Output
 
 ```
-go run ./internal/tools/resource-lint
-2026/01/05 10:39:01 Using local git diff mode
-2026/01/05 10:39:01 Current branch: my-feature-branch
-2026/01/05 10:39:02 Merge-base with origin/main: 0aac888
-2026/01/05 10:39:03 ✓ Found 9 changed files with 1553 changed lines
-2026/01/05 10:39:03 Auto-detected 1 changed packages:
-2026/01/05 10:39:03   ./internal/services/policy
+go run ./internal/tools/resource-lint ./internal/services/policy/...
+2026/01/05 10:39:01 Checking all issues in packages
 2026/01/05 10:39:03 Loading packages...
 2026/01/05 10:40:36 Running analysis...
 
@@ -324,7 +313,7 @@ func runMyAnalyzer(pass *analysis.Pass) (interface{}, error) {
 
 ### Tips
 
-1. **Always use change filtering** - Call `loader.IsFileChanged()` and `loader.ShouldReport()` to support incremental analysis
+1. **Use change filtering for diff-based analysis** - Call `loader.IsFileChanged()` and `loader.ShouldReport()` to support `--diff` filtering
 2. **Pre-filter AST nodes** - Use `inspector.Preorder` with specific node types for better performance
 3. **Skip test files** - Usually add `strings.HasSuffix(filename, "_test.go")` check
 4. **Skip migration packages** - Add `strings.Contains(pass.Pkg.Path(), "/migration")` check if needed
