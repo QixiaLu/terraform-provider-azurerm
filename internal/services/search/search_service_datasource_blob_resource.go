@@ -147,10 +147,11 @@ func (r SearchServiceDatasourceBlobResource) Create() sdk.ResourceFunc {
 				Container: datasources.SearchIndexerDataContainer{
 					Name: model.ContainerName,
 				},
-				Credentials: datasources.DataSourceCredentials{
-					ConnectionString: pointer.To(model.ConnectionString),
-				},
-				EncryptionKey: searchSchema.ExpandSearchDatasourceEncryptionKey(model.EncryptionKey),
+				Credentials: datasources.DataSourceCredentials{},
+			}
+
+			if model.ConnectionString != "" {
+				parameters.Credentials.ConnectionString = pointer.To(model.ConnectionString)
 			}
 
 			if model.Description != "" {
@@ -167,6 +168,8 @@ func (r SearchServiceDatasourceBlobResource) Create() sdk.ResourceFunc {
 					SoftDeleteMarkerValue: pointer.To(model.SoftDeleteMarkerValue),
 				}
 			}
+
+			parameters.EncryptionKey = searchSchema.ExpandSearchDatasourceEncryptionKey(model.EncryptionKey)
 
 			if _, err := client.Create(ctx, parameters, datasources.DefaultCreateOperationOptions()); err != nil {
 				return fmt.Errorf("creating %s: %+v", id, err)
@@ -256,11 +259,8 @@ func (r SearchServiceDatasourceBlobResource) Update() sdk.ResourceFunc {
 
 			existing := *resp.Model
 
-			if metadata.ResourceData.HasChange("container_name") {
+			if metadata.ResourceData.HasChange("container_name") || metadata.ResourceData.HasChange("container_query") {
 				existing.Container.Name = state.ContainerName
-			}
-
-			if metadata.ResourceData.HasChange("container_query") {
 				existing.Container.Query = pointer.To(state.ContainerQuery)
 			}
 
@@ -276,11 +276,15 @@ func (r SearchServiceDatasourceBlobResource) Update() sdk.ResourceFunc {
 				existing.EncryptionKey = searchSchema.ExpandSearchDatasourceEncryptionKey(state.EncryptionKey)
 			}
 
-			// The SDK populates zero-value RawData*DetectionPolicyImpl structs from the GET response
-			// that serialize to invalid abstract-type payloads the API rejects. Nil them out and
-			// rebuild DataDeletionDetectionPolicy from current state.
+			// Always nil out DataChangeDetectionPolicy - it is not managed by this resource and the SDK
+			// may populate it with a zero-value RawDataChangeDetectionPolicyImpl from the GET response,
+			// which serializes to an invalid payload the API rejects.
 			existing.DataChangeDetectionPolicy = nil
 			existing.DataDeletionDetectionPolicy = nil
+
+			// Always set DataDeletionDetectionPolicy from current state regardless of HasChange.
+			// Without this, an unchanged field retains the zero-value RawDataDeletionDetectionPolicyImpl
+			// from the GET response which serializes to an invalid abstract-type payload the API rejects.
 			if state.SoftDeleteColumnName != "" {
 				existing.DataDeletionDetectionPolicy = datasources.SoftDeleteColumnDeletionDetectionPolicy{
 					SoftDeleteColumnName:  pointer.To(state.SoftDeleteColumnName),
@@ -291,7 +295,6 @@ func (r SearchServiceDatasourceBlobResource) Update() sdk.ResourceFunc {
 			opts := datasources.CreateOrUpdateOperationOptions{
 				Prefer: pointer.To(datasources.PreferReturnRepresentation),
 			}
-
 			if _, err := client.CreateOrUpdate(ctx, *resourceId, existing, opts); err != nil {
 				return fmt.Errorf("updating %s: %+v", *resourceId, err)
 			}
