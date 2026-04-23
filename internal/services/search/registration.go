@@ -56,6 +56,7 @@ func (r Registration) SupportedDataSources() map[string]*pluginsdk.Resource {
 func (r Registration) SupportedResources() map[string]*pluginsdk.Resource {
 	return map[string]*pluginsdk.Resource{
 		"azurerm_search_service": resourceSearchService(),
+		"azurerm_search_datasource_blob": resourceSearchService(),
 	}
 }
 
