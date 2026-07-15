@@ -1,0 +1,10 @@
+{
+  "service": "costmanagement",
+  "phase": "full",
+  "test_regex": "TestAcc",
+  "run_filter": "TestAcc",
+  "start_time": "2026-07-15T12:42:36Z",
+  "pid_file": "/workspace/azurerm/.acctest-run/costmanagement/run.pid",
+  "run_json": "/workspace/azurerm/.acctest-run/costmanagement/run.json",
+  "run_err": "/workspace/azurerm/.acctest-run/costmanagement/run.err"
+}

@@ -1,0 +1,20 @@
+[
+  {
+    "test": "TestAccResourceGroupCostManagementExport_update",
+    "status": "fixed",
+    "batch": 2,
+    "file": "internal/services/costmanagement/resource_group_cost_management_export_resource_test.go",
+    "root_cause": "The 2025-03-01 API normalizes TheLastMonth to MonthToDate in storage. Any UPDATE to the resource then fails because MonthToDate+Monthly is an invalid combination under the new API validation rules. The previous fix (r01) only changed update() from WeekToDate to TheLastBillingMonth but left basic() using TheLastMonth, which still created the MonthToDate-stored resource that blocked all further updates.",
+    "fix": "Changed time_frame in both non-5.0 and 5.0 branches of basic() from TheLastMonth to TheLastBillingMonth. Both basic() and update() now use TheLastBillingMonth+Monthly, which is a valid combination. The test still exercises the update path via changing recurrence_period dates and adding explicit file_format.",
+    "verified_in_full_run": true
+  },
+  {
+    "test": "TestAccSubscriptionCostManagementExport_update",
+    "status": "fixed",
+    "batch": 2,
+    "file": "internal/services/costmanagement/subscription_cost_management_export_resource_test.go",
+    "root_cause": "Same as TestAccResourceGroupCostManagementExport_update - TheLastMonth in basic() gets normalized to MonthToDate by the 2025-03-01 API, and any subsequent update fails with 400 Bad Request (MonthToDate+Monthly invalid).",
+    "fix": "Changed time_frame in both non-5.0 and 5.0 branches of basic() from TheLastMonth to TheLastBillingMonth.",
+    "verified_in_full_run": true
+  }
+]

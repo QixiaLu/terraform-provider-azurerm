@@ -1,0 +1,12 @@
+{
+  "stage": "acctest",
+  "phase": "launch",
+  "test_phase": "smoke",
+  "status": "launched",
+  "summary": "Smoke gate re-launched for costmanagement (prior run PID 39928 had exited). TeamCity main baseline reused from prior capture (baseline.json present). Detached go test running against 7 _basic tests (PID 70178). run filter anchored to exact smoke test names.",
+  "pid_file": "/workspace/azurerm/.acctest-run/costmanagement/run.pid",
+  "run_json": "/workspace/azurerm/.acctest-run/costmanagement/run.json",
+  "run_filter": "^(TestAccBillingAccountCostManagementExport_basic|TestAccCostManagementScheduledAction_basic|TestAccResourceAnomalyAlert_basic|TestAccResourceGroupCostManagementExport_basic|TestAccResourceGroupCostManagementView_basic|TestAccSubscriptionCostManagementExport_basic|TestAccSubscriptionCostManagementView_basic)$",
+  "baseline_mode": "normal",
+  "test_regex": "TestAcc"
+}

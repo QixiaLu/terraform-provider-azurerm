@@ -1,0 +1,2 @@
+TestAccResourceGroupCostManagementExport_update
+TestAccSubscriptionCostManagementExport_update

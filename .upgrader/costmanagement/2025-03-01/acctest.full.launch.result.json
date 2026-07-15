@@ -1,0 +1,12 @@
+{
+  "stage": "acctest",
+  "phase": "launch",
+  "test_phase": "full",
+  "status": "launched",
+  "summary": "Reused existing baseline.json (normal mode). Prior full run completed. Launched new full run (PID 44091) with -run=TestAcc and no Go test timeout.",
+  "pid_file": "/workspace/azurerm/.acctest-run/costmanagement/run.pid",
+  "run_json": "/workspace/azurerm/.acctest-run/costmanagement/run.json",
+  "run_filter": "TestAcc",
+  "baseline_mode": "normal",
+  "test_regex": "TestAcc"
+}

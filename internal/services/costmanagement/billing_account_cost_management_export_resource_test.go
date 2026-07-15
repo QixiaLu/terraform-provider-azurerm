@@ -13,7 +13,7 @@ import (
 	"github.com/hashicorp/terraform-provider-azurerm/internal/features"
 
 	"github.com/hashicorp/go-azure-helpers/lang/pointer"
-	"github.com/hashicorp/go-azure-sdk/resource-manager/costmanagement/2023-08-01/exports"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/costmanagement/2025-03-01/exports"
 	"github.com/hashicorp/terraform-provider-azurerm/internal/acceptance"
 	"github.com/hashicorp/terraform-provider-azurerm/internal/acceptance/check"
 	"github.com/hashicorp/terraform-provider-azurerm/internal/clients"
@@ -149,7 +149,7 @@ resource "azurerm_billing_account_cost_management_export" "test" {
 
   export_data_storage_location {
     container_id     = azurerm_storage_container.test.id
-    root_folder_path = "/root"
+    root_folder_path = "root"
   }
 
   export_data_options {
@@ -192,7 +192,7 @@ resource "azurerm_billing_account_cost_management_export" "test" {
 
   export_data_storage_location {
     container_id     = azurerm_storage_container.test.id
-    root_folder_path = "/root"
+    root_folder_path = "root"
   }
 
   export_data_options {
@@ -241,7 +241,7 @@ resource "azurerm_billing_account_cost_management_export" "test" {
 
   export_data_storage_location {
     container_id     = azurerm_storage_container.test.id
-    root_folder_path = "/root/updated"
+    root_folder_path = "root/updated"
   }
 
   export_data_options {
@@ -284,7 +284,7 @@ resource "azurerm_billing_account_cost_management_export" "test" {
 
   export_data_storage_location {
     container_id     = azurerm_storage_container.test.id
-    root_folder_path = "/root/updated"
+    root_folder_path = "root/updated"
   }
 
   export_data_options {
@@ -309,7 +309,7 @@ resource "azurerm_billing_account_cost_management_export" "import" {
 
   export_data_storage_location {
     container_id     = azurerm_storage_container.test.id
-    root_folder_path = "/root"
+    root_folder_path = "root"
   }
 
   export_data_options {

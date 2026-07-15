@@ -10,8 +10,8 @@ import (
 
 	"github.com/hashicorp/go-azure-helpers/lang/pointer"
 	"github.com/hashicorp/go-azure-helpers/lang/response"
-	"github.com/hashicorp/go-azure-sdk/resource-manager/costmanagement/2023-08-01/scheduledactions"
-	"github.com/hashicorp/go-azure-sdk/resource-manager/costmanagement/2023-08-01/views"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/costmanagement/2025-03-01/scheduledactionoperationgroup"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/costmanagement/2025-03-01/viewoperationgroup"
 	"github.com/hashicorp/terraform-provider-azurerm/helpers/tf"
 	"github.com/hashicorp/terraform-provider-azurerm/internal/features"
 	"github.com/hashicorp/terraform-provider-azurerm/internal/sdk"
@@ -78,7 +78,7 @@ func (r CostManagementScheduledActionResource) Arguments() map[string]*pluginsdk
 		"frequency": {
 			Type:         pluginsdk.TypeString,
 			Required:     true,
-			ValidateFunc: validation.StringInSlice(scheduledactions.PossibleValuesForScheduleFrequency(), false),
+			ValidateFunc: validation.StringInSlice(scheduledactionoperationgroup.PossibleValuesForScheduleFrequency(), false),
 		},
 
 		"days_of_week": {
@@ -87,7 +87,7 @@ func (r CostManagementScheduledActionResource) Arguments() map[string]*pluginsdk
 			MinItems: 1,
 			Elem: &pluginsdk.Schema{
 				Type:         pluginsdk.TypeString,
-				ValidateFunc: validation.StringInSlice(scheduledactions.PossibleValuesForDaysOfWeek(), false),
+				ValidateFunc: validation.StringInSlice(scheduledactionoperationgroup.PossibleValuesForDaysOfWeek(), false),
 			},
 		},
 
@@ -97,7 +97,7 @@ func (r CostManagementScheduledActionResource) Arguments() map[string]*pluginsdk
 			MinItems: 1,
 			Elem: &pluginsdk.Schema{
 				Type:         pluginsdk.TypeString,
-				ValidateFunc: validation.StringInSlice(scheduledactions.PossibleValuesForWeeksOfMonth(), false),
+				ValidateFunc: validation.StringInSlice(scheduledactionoperationgroup.PossibleValuesForWeeksOfMonth(), false),
 			},
 		},
 
@@ -146,7 +146,7 @@ func (r CostManagementScheduledActionResource) ResourceType() string {
 }
 
 func (r CostManagementScheduledActionResource) IDValidationFunc() pluginsdk.SchemaValidateFunc {
-	return scheduledactions.ValidateScopedScheduledActionID
+	return scheduledactionoperationgroup.ValidateScopedScheduledActionID
 }
 
 func (r CostManagementScheduledActionResource) Create() sdk.ResourceFunc {
@@ -155,14 +155,14 @@ func (r CostManagementScheduledActionResource) Create() sdk.ResourceFunc {
 		Func: func(ctx context.Context, metadata sdk.ResourceMetaData) error {
 			client := metadata.Client.CostManagement.ScheduledActionsClient
 
-			viewId, err := views.ParseScopedViewID(metadata.ResourceData.Get("view_id").(string))
+			viewId, err := viewoperationgroup.ParseScopedViewID(metadata.ResourceData.Get("view_id").(string))
 			if err != nil {
 				return err
 			}
-			id := scheduledactions.NewScopedScheduledActionID(viewId.Scope, metadata.ResourceData.Get("name").(string))
+			id := scheduledactionoperationgroup.NewScopedScheduledActionID(viewId.Scope, metadata.ResourceData.Get("name").(string))
 
 			if !metadata.Client.Features.SkipImportCheckOnCreateAndAllowOverwritingExistingResources {
-				existing, err := client.GetByScope(ctx, id)
+				existing, err := client.ScheduledActionsGetByScope(ctx, id)
 				if err != nil {
 					if !response.WasNotFound(existing.HttpResponse) {
 						return fmt.Errorf("checking for presence of existing %s: %+v", id, err)
@@ -174,23 +174,23 @@ func (r CostManagementScheduledActionResource) Create() sdk.ResourceFunc {
 				}
 			}
 
-			var daysOfWeek []scheduledactions.DaysOfWeek
+			var daysOfWeek []scheduledactionoperationgroup.DaysOfWeek
 			if len(metadata.ResourceData.Get("days_of_week").([]interface{})) > 0 {
-				daysOfWeek = make([]scheduledactions.DaysOfWeek, 0)
+				daysOfWeek = make([]scheduledactionoperationgroup.DaysOfWeek, 0)
 				for _, value := range metadata.ResourceData.Get("days_of_week").([]interface{}) {
-					daysOfWeek = append(daysOfWeek, scheduledactions.DaysOfWeek(value.(string)))
+					daysOfWeek = append(daysOfWeek, scheduledactionoperationgroup.DaysOfWeek(value.(string)))
 				}
 			}
 
-			var weeksOfMonth []scheduledactions.WeeksOfMonth
+			var weeksOfMonth []scheduledactionoperationgroup.WeeksOfMonth
 			if len(metadata.ResourceData.Get("weeks_of_month").([]interface{})) > 0 {
-				weeksOfMonth = make([]scheduledactions.WeeksOfMonth, 0)
+				weeksOfMonth = make([]scheduledactionoperationgroup.WeeksOfMonth, 0)
 				for _, value := range metadata.ResourceData.Get("weeks_of_month").([]interface{}) {
-					weeksOfMonth = append(weeksOfMonth, scheduledactions.WeeksOfMonth(value.(string)))
+					weeksOfMonth = append(weeksOfMonth, scheduledactionoperationgroup.WeeksOfMonth(value.(string)))
 				}
 			}
-			schedule := scheduledactions.ScheduleProperties{
-				Frequency:    scheduledactions.ScheduleFrequency(metadata.ResourceData.Get("frequency").(string)),
+			schedule := scheduledactionoperationgroup.ScheduleProperties{
+				Frequency:    scheduledactionoperationgroup.ScheduleFrequency(metadata.ResourceData.Get("frequency").(string)),
 				WeeksOfMonth: &weeksOfMonth,
 				DaysOfWeek:   &daysOfWeek,
 				HourOfDay:    pointer.To(int64(metadata.ResourceData.Get("hour_of_day").(int))),
@@ -199,17 +199,17 @@ func (r CostManagementScheduledActionResource) Create() sdk.ResourceFunc {
 				EndDate:      metadata.ResourceData.Get("end_date").(string),
 			}
 
-			props := scheduledactions.ScheduledAction{
-				Kind: pointer.To(scheduledactions.ScheduledActionKindEmail),
-				Properties: &scheduledactions.ScheduledActionProperties{
+			props := scheduledactionoperationgroup.ScheduledAction{
+				Kind: pointer.To(scheduledactionoperationgroup.ScheduledActionKindEmail),
+				Properties: &scheduledactionoperationgroup.ScheduledActionProperties{
 					DisplayName: metadata.ResourceData.Get("display_name").(string),
-					Status:      scheduledactions.ScheduledActionStatusEnabled,
+					Status:      scheduledactionoperationgroup.ScheduledActionStatusEnabled,
 					ViewId:      viewId.ID(),
-					FileDestination: &scheduledactions.FileDestination{
-						FileFormats: &[]scheduledactions.FileFormat{},
+					FileDestination: &scheduledactionoperationgroup.FileDestination{
+						FileFormats: &[]scheduledactionoperationgroup.FileFormat{},
 					},
 					NotificationEmail: pointer.To(metadata.ResourceData.Get("email_address_sender").(string)),
-					Notification: scheduledactions.NotificationProperties{
+					Notification: scheduledactionoperationgroup.NotificationProperties{
 						Subject: metadata.ResourceData.Get("email_subject").(string),
 						Message: pointer.To(metadata.ResourceData.Get("message").(string)),
 						To:      *utils.ExpandStringSlice(metadata.ResourceData.Get("email_addresses").([]interface{})),
@@ -218,7 +218,7 @@ func (r CostManagementScheduledActionResource) Create() sdk.ResourceFunc {
 				},
 			}
 
-			if _, err = client.CreateOrUpdateByScope(ctx, id, props, scheduledactions.CreateOrUpdateByScopeOperationOptions{}); err != nil {
+			if _, err = client.ScheduledActionsCreateOrUpdateByScope(ctx, id, props, scheduledactionoperationgroup.ScheduledActionsCreateOrUpdateByScopeOperationOptions{}); err != nil {
 				return fmt.Errorf("creating %s: %+v", id, err)
 			}
 
@@ -234,12 +234,12 @@ func (r CostManagementScheduledActionResource) Read() sdk.ResourceFunc {
 		Func: func(ctx context.Context, metadata sdk.ResourceMetaData) error {
 			client := metadata.Client.CostManagement.ScheduledActionsClient
 
-			id, err := scheduledactions.ParseScopedScheduledActionID(metadata.ResourceData.Id())
+			id, err := scheduledactionoperationgroup.ParseScopedScheduledActionID(metadata.ResourceData.Id())
 			if err != nil {
 				return err
 			}
 
-			resp, err := client.GetByScope(ctx, *id)
+			resp, err := client.ScheduledActionsGetByScope(ctx, *id)
 			if err != nil {
 				if response.WasNotFound(resp.HttpResponse) {
 					return metadata.MarkAsGone(id)
@@ -253,7 +253,7 @@ func (r CostManagementScheduledActionResource) Read() sdk.ResourceFunc {
 				if props := model.Properties; props != nil {
 					metadata.ResourceData.Set("display_name", props.DisplayName)
 					metadata.ResourceData.Set("email_address_sender", props.NotificationEmail)
-					viewId, err := views.ParseScopedViewID(props.ViewId)
+					viewId, err := viewoperationgroup.ParseScopedViewID(props.ViewId)
 					if err != nil {
 						return err
 					}
@@ -284,12 +284,12 @@ func (r CostManagementScheduledActionResource) Delete() sdk.ResourceFunc {
 		Func: func(ctx context.Context, metadata sdk.ResourceMetaData) error {
 			client := metadata.Client.CostManagement.ScheduledActionsClient
 
-			id, err := scheduledactions.ParseScopedScheduledActionID(metadata.ResourceData.Id())
+			id, err := scheduledactionoperationgroup.ParseScopedScheduledActionID(metadata.ResourceData.Id())
 			if err != nil {
 				return err
 			}
 
-			if _, err = client.DeleteByScope(ctx, *id); err != nil {
+			if _, err = client.ScheduledActionsDeleteByScope(ctx, *id); err != nil {
 				return fmt.Errorf("deleting %s: %+v", *id, err)
 			}
 
@@ -304,13 +304,13 @@ func (r CostManagementScheduledActionResource) Update() sdk.ResourceFunc {
 		Func: func(ctx context.Context, metadata sdk.ResourceMetaData) error {
 			client := metadata.Client.CostManagement.ScheduledActionsClient
 
-			id, err := scheduledactions.ParseScopedScheduledActionID(metadata.ResourceData.Id())
+			id, err := scheduledactionoperationgroup.ParseScopedScheduledActionID(metadata.ResourceData.Id())
 			if err != nil {
 				return err
 			}
 
 			// Update operation requires latest eTag to be set in the request.
-			existing, err := client.GetByScope(ctx, *id)
+			existing, err := client.ScheduledActionsGetByScope(ctx, *id)
 			if err != nil {
 				return fmt.Errorf("reading %s: %+v", *id, err)
 			}
@@ -328,7 +328,7 @@ func (r CostManagementScheduledActionResource) Update() sdk.ResourceFunc {
 				}
 
 				if metadata.ResourceData.HasChange("view_id") {
-					id, err := views.ParseScopedViewID(metadata.ResourceData.Get("view_id").(string))
+					id, err := viewoperationgroup.ParseScopedViewID(metadata.ResourceData.Get("view_id").(string))
 					if err != nil {
 						return err
 					}
@@ -352,26 +352,26 @@ func (r CostManagementScheduledActionResource) Update() sdk.ResourceFunc {
 				}
 
 				if metadata.ResourceData.HasChange("frequency") {
-					model.Properties.Schedule.Frequency = scheduledactions.ScheduleFrequency(metadata.ResourceData.Get("frequency").(string))
+					model.Properties.Schedule.Frequency = scheduledactionoperationgroup.ScheduleFrequency(metadata.ResourceData.Get("frequency").(string))
 				}
 
 				if metadata.ResourceData.HasChange("days_of_week") {
-					var daysOfWeek []scheduledactions.DaysOfWeek
+					var daysOfWeek []scheduledactionoperationgroup.DaysOfWeek
 					if len(metadata.ResourceData.Get("days_of_week").([]interface{})) > 0 {
-						daysOfWeek = make([]scheduledactions.DaysOfWeek, 0)
+						daysOfWeek = make([]scheduledactionoperationgroup.DaysOfWeek, 0)
 						for _, value := range metadata.ResourceData.Get("days_of_week").([]interface{}) {
-							daysOfWeek = append(daysOfWeek, scheduledactions.DaysOfWeek(value.(string)))
+							daysOfWeek = append(daysOfWeek, scheduledactionoperationgroup.DaysOfWeek(value.(string)))
 						}
 					}
 					model.Properties.Schedule.DaysOfWeek = &daysOfWeek
 				}
 
 				if metadata.ResourceData.HasChange("weeks_of_month") {
-					var weeksOfMonth []scheduledactions.WeeksOfMonth
+					var weeksOfMonth []scheduledactionoperationgroup.WeeksOfMonth
 					if len(metadata.ResourceData.Get("weeks_of_month").([]interface{})) > 0 {
-						weeksOfMonth = make([]scheduledactions.WeeksOfMonth, 0)
+						weeksOfMonth = make([]scheduledactionoperationgroup.WeeksOfMonth, 0)
 						for _, value := range metadata.ResourceData.Get("weeks_of_month").([]interface{}) {
-							weeksOfMonth = append(weeksOfMonth, scheduledactions.WeeksOfMonth(value.(string)))
+							weeksOfMonth = append(weeksOfMonth, scheduledactionoperationgroup.WeeksOfMonth(value.(string)))
 						}
 					}
 					model.Properties.Schedule.WeeksOfMonth = &weeksOfMonth
@@ -393,7 +393,7 @@ func (r CostManagementScheduledActionResource) Update() sdk.ResourceFunc {
 					model.Properties.Schedule.DayOfMonth = pointer.To(int64(metadata.ResourceData.Get("day_of_month").(int)))
 				}
 
-				if _, err = client.CreateOrUpdateByScope(ctx, *id, *model, scheduledactions.CreateOrUpdateByScopeOperationOptions{}); err != nil {
+				if _, err = client.ScheduledActionsCreateOrUpdateByScope(ctx, *id, *model, scheduledactionoperationgroup.ScheduledActionsCreateOrUpdateByScopeOperationOptions{}); err != nil {
 					return fmt.Errorf("updating %s: %+v", *id, err)
 				}
 			}

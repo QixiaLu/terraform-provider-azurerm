@@ -6,16 +6,16 @@ package client
 import (
 	"fmt"
 
-	"github.com/hashicorp/go-azure-sdk/resource-manager/costmanagement/2023-08-01/exports"
-	"github.com/hashicorp/go-azure-sdk/resource-manager/costmanagement/2023-08-01/scheduledactions"
-	"github.com/hashicorp/go-azure-sdk/resource-manager/costmanagement/2023-08-01/views"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/costmanagement/2025-03-01/exports"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/costmanagement/2025-03-01/scheduledactionoperationgroup"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/costmanagement/2025-03-01/viewoperationgroup"
 	"github.com/hashicorp/terraform-provider-azurerm/internal/common"
 )
 
 type Client struct {
 	ExportClient           *exports.ExportsClient
-	ScheduledActionsClient *scheduledactions.ScheduledActionsClient
-	ViewsClient            *views.ViewsClient
+	ScheduledActionsClient *scheduledactionoperationgroup.ScheduledActionOperationGroupClient
+	ViewsClient            *viewoperationgroup.ViewOperationGroupClient
 }
 
 func NewClient(o *common.ClientOptions) (*Client, error) {
@@ -25,13 +25,13 @@ func NewClient(o *common.ClientOptions) (*Client, error) {
 	}
 	o.Configure(exportClient.Client, o.Authorizers.ResourceManager)
 
-	scheduledActionsClient, err := scheduledactions.NewScheduledActionsClientWithBaseURI(o.Environment.ResourceManager)
+	scheduledActionsClient, err := scheduledactionoperationgroup.NewScheduledActionOperationGroupClientWithBaseURI(o.Environment.ResourceManager)
 	if err != nil {
 		return nil, fmt.Errorf("building ScheduledActions client: %+v", err)
 	}
 	o.Configure(scheduledActionsClient.Client, o.Authorizers.ResourceManager)
 
-	viewsClient, err := views.NewViewsClientWithBaseURI(o.Environment.ResourceManager)
+	viewsClient, err := viewoperationgroup.NewViewOperationGroupClientWithBaseURI(o.Environment.ResourceManager)
 	if err != nil {
 		return nil, fmt.Errorf("building Views client: %+v", err)
 	}

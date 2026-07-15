@@ -12,7 +12,7 @@ import (
 	"github.com/hashicorp/terraform-provider-azurerm/internal/features"
 
 	"github.com/hashicorp/go-azure-helpers/lang/pointer"
-	"github.com/hashicorp/go-azure-sdk/resource-manager/costmanagement/2023-08-01/exports"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/costmanagement/2025-03-01/exports"
 	"github.com/hashicorp/terraform-provider-azurerm/internal/acceptance"
 	"github.com/hashicorp/terraform-provider-azurerm/internal/acceptance/check"
 	"github.com/hashicorp/terraform-provider-azurerm/internal/clients"
@@ -138,12 +138,12 @@ resource "azurerm_subscription_cost_management_export" "test" {
 
   export_data_storage_location {
     container_id     = "${azurerm_storage_account.test.id}/blobServices/default/containers/${azurerm_storage_container.test.name}"
-    root_folder_path = "/root"
+    root_folder_path = "root"
   }
 
   export_data_options {
     type       = "Usage"
-    time_frame = "TheLastMonth"
+    time_frame = "TheLastBillingMonth"
   }
 }
 		`, data.RandomInteger, data.Locations.Primary, data.RandomString, data.RandomString, data.RandomInteger, start, end)
@@ -183,12 +183,12 @@ resource "azurerm_subscription_cost_management_export" "test" {
 
   export_data_storage_location {
     container_id     = "${azurerm_storage_account.test.id}/blobServices/default/containers/${azurerm_storage_container.test.name}"
-    root_folder_path = "/root"
+    root_folder_path = "root"
   }
 
   export_data_options {
     type       = "Usage"
-    time_frame = "TheLastMonth"
+    time_frame = "TheLastBillingMonth"
   }
 }
 	`, data.RandomInteger, data.Locations.Primary, data.RandomString, data.RandomString, data.RandomInteger, start, end)
@@ -234,12 +234,12 @@ resource "azurerm_subscription_cost_management_export" "test" {
 
   export_data_storage_location {
     container_id     = "${azurerm_storage_account.test.id}/blobServices/default/containers/${azurerm_storage_container.test.name}"
-    root_folder_path = "/root"
+    root_folder_path = "root"
   }
 
   export_data_options {
     type       = "Usage"
-    time_frame = "WeekToDate"
+    time_frame = "TheLastBillingMonth"
   }
 }
 		`, data.RandomInteger, data.Locations.Primary, data.RandomString, data.RandomString, data.RandomInteger, start, end)
@@ -279,12 +279,12 @@ resource "azurerm_subscription_cost_management_export" "test" {
 
   export_data_storage_location {
     container_id     = "${azurerm_storage_account.test.id}/blobServices/default/containers/${azurerm_storage_container.test.name}"
-    root_folder_path = "/root"
+    root_folder_path = "root"
   }
 
   export_data_options {
     type       = "Usage"
-    time_frame = "WeekToDate"
+    time_frame = "TheLastBillingMonth"
   }
 }
 	`, data.RandomInteger, data.Locations.Primary, data.RandomString, data.RandomString, data.RandomInteger, start, end)
@@ -304,7 +304,7 @@ resource "azurerm_subscription_cost_management_export" "import" {
 
   export_data_storage_location {
     container_id     = "${azurerm_storage_account.test.id}/blobServices/default/containers/${azurerm_storage_container.test.name}"
-    root_folder_path = "/root"
+    root_folder_path = "root"
   }
 
   export_data_options {

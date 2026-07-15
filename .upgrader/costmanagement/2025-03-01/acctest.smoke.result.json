@@ -1,0 +1,28 @@
+{
+  "stage": "acctest",
+  "phase": "collect",
+  "status": "done",
+  "loop_action": "converged",
+  "summary": "Re-verification run (post-fix round) passed cleanly. 6 smoke tests ran, 0 failed. The 2 tests fixed in the previous collect round (root_folder_path leading-slash rejection by the 2025-03-01 API) now pass: TestAccResourceGroupCostManagementExport_basic and TestAccSubscriptionCostManagementExport_basic. No code changes made this round. All triage.json rows are resolved (both 'fixed'). Smoke phase is green.",
+  "counts": {
+    "total": 6,
+    "passed": 6,
+    "failed": 0,
+    "new_failed": 0,
+    "flaky": 0
+  },
+  "fixed": [
+    {
+      "test": "TestAccResourceGroupCostManagementExport_basic",
+      "file": "internal/services/costmanagement/resource_group_cost_management_export_resource_test.go"
+    },
+    {
+      "test": "TestAccSubscriptionCostManagementExport_basic",
+      "file": "internal/services/costmanagement/subscription_cost_management_export_resource_test.go"
+    }
+  ],
+  "breaking_changes": [],
+  "api_bugs": [],
+  "needs_human": [],
+  "leaked_resource_risks": []
+}

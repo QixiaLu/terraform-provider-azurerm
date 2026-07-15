@@ -1,0 +1,6 @@
+{
+  "status": "done",
+  "build_passed": true,
+  "summary": "Successfully upgraded costmanagement RP from 2023-08-01 to 2025-03-01. No go-azure-sdk version bump needed (2025-03-01 already present in pinned v0.20260608.1152044). The key structural change was that the SDK splits scoped operations into new packages: 'scheduledactionoperationgroup' (replaces scoped methods on 'scheduledactions') and 'viewoperationgroup' (replaces scoped methods on 'views'). All client, resource, and test files updated; vendor directory re-synced. Method renames: GetByScope→ScheduledActionsGetByScope/ViewsGetByScope, CreateOrUpdateByScope→ScheduledActionsCreateOrUpdateByScope/ViewsCreateOrUpdateByScope, DeleteByScope→ScheduledActionsDeleteByScope/ViewsDeleteByScope. No schema/behavior changes required. Both focused (costmanagement/...) and full (./...) builds pass with exit code 0.",
+  "blockers": []
+}
