@@ -1,0 +1,30 @@
+{
+  "status": "done",
+  "build_passed": true,
+  "summary": "Costmanagement RP upgraded from 2023-08-01 to 2025-03-01. Updated 13 resource/client files and 7 test files. Key change: scheduledactions/views APIs reorganized into operation groups (scheduledactionoperationgroup, viewoperationgroup) with renamed methods. No user-facing breaking changes - all functionality preserved. Full provider builds successfully.",
+  "blockers": [],
+  "files_modified": [
+    "internal/services/costmanagement/client/client.go",
+    "internal/services/costmanagement/billing_account_cost_management_export_resource.go",
+    "internal/services/costmanagement/billing_account_cost_management_export_resource_test.go",
+    "internal/services/costmanagement/cost_anomaly_alert_resource.go",
+    "internal/services/costmanagement/cost_anomaly_alert_resource_test.go",
+    "internal/services/costmanagement/cost_management_scheduled_action_resource.go",
+    "internal/services/costmanagement/cost_management_scheduled_action_resource_test.go",
+    "internal/services/costmanagement/export_resource_base.go",
+    "internal/services/costmanagement/resource_group_cost_management_export_resource.go",
+    "internal/services/costmanagement/resource_group_cost_management_export_resource_test.go",
+    "internal/services/costmanagement/resource_group_cost_management_view_resource.go",
+    "internal/services/costmanagement/resource_group_cost_management_view_resource_test.go",
+    "internal/services/costmanagement/subscription_cost_management_export_resource.go",
+    "internal/services/costmanagement/subscription_cost_management_export_resource_test.go",
+    "internal/services/costmanagement/subscription_cost_management_view_resource.go",
+    "internal/services/costmanagement/subscription_cost_management_view_resource_test.go",
+    "internal/services/costmanagement/view_resource_base.go"
+  ],
+  "breaking_changes": {
+    "user_facing": false,
+    "details": "API reorganization is internal only. Scoped operations moved from scheduledactions/views packages to new scheduledactionoperationgroup/viewoperationgroup packages. Method names changed (GetByScope -> ScheduledActionsGetByScope/ViewsGetByScope). Resource schemas and behavior unchanged.",
+    "mitigation": "None required - changes are internal to provider implementation"
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "stage": "acctest",
+  "phase": "collect",
+  "test_phase": "smoke",
+  "status": "failed",
+  "loop_action": "tool_error",
+  "summary": "Build failed due to disk space exhaustion (100% disk usage). The test binary could not be compiled: '/usr/local/go/pkg/tool/linux_amd64/link: mapping output file failed: no space left on device'. This is an infrastructure/environment failure, not a code or test issue. Requires operator intervention to free disk space before the smoke phase can be attempted.",
+  "counts": {
+    "total": 7,
+    "passed": 0,
+    "failed": 0,
+    "new_failed": 0,
+    "flaky": 0
+  },
+  "fixed": [],
+  "breaking_changes": [],
+  "api_bugs": [],
+  "needs_human": [],
+  "leaked_resource_risks": [],
+  "tool_error": {
+    "type": "build_failure",
+    "cause": "disk_full",
+    "details": "Disk usage at 100% (72G used of 72G). Build linker failed to create test binary. No tests could run.",
+    "operator_action_required": "Free disk space (at least several GB) and re-run the smoke phase."
+  },
+  "baseline_context": {
+    "TestAccCostManagementScheduledAction_basic": "FAILURE (pre-existing)"
+  },
+  "notes": [
+    "The smoke phase attempted to run 7 _basic tests for costmanagement resources.",
+    "No test execution occurred - build failed before any tests could start.",
+    "The baseline shows TestAccCostManagementScheduledAction_basic was already failing on main, but this run couldn't verify any state due to the build failure.",
+    "This is NOT a test failure, code regression, or API issue - it is purely an environment constraint."
+  ]
+}

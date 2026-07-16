@@ -1,0 +1,6 @@
+{
+  "start_time": "2026-07-16T01:20:16.540Z",
+  "phase": "smoke",
+  "run_filter": "^(TestAccBillingAccountCostManagementExport_basic|TestAccCostManagementScheduledAction_basic|TestAccResourceAnomalyAlert_basic|TestAccResourceGroupCostManagementExport_basic|TestAccResourceGroupCostManagementView_basic|TestAccSubscriptionCostManagementExport_basic|TestAccSubscriptionCostManagementView_basic)$",
+  "test_count": 7
+}

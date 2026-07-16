@@ -1,0 +1,15 @@
+{
+  "stage": "acctest",
+  "phase": "launch",
+  "test_phase": "smoke",
+  "status": "launched",
+  "summary": "Smoke test run launched successfully with 7 _basic tests. PID 20919 is running. The TeamCity main baseline was captured with 25 test entries (4 not-passing). Results will be available after the detached run completes.",
+  "pid_file": "/workspace/azurerm/.acctest-run/costmanagement/run.pid",
+  "run_json": "/workspace/azurerm/.acctest-run/costmanagement/run.json",
+  "run_filter": "^(TestAccBillingAccountCostManagementExport_basic|TestAccCostManagementScheduledAction_basic|TestAccResourceAnomalyAlert_basic|TestAccResourceGroupCostManagementExport_basic|TestAccResourceGroupCostManagementView_basic|TestAccSubscriptionCostManagementExport_basic|TestAccSubscriptionCostManagementView_basic)$",
+  "baseline_mode": "normal",
+  "test_regex": "TestAcc",
+  "test_count": 7,
+  "baseline_test_count": 25,
+  "baseline_failures": 4
+}
