@@ -650,7 +650,7 @@ func expandNetworkConnectionMonitorEndpoint(input []interface{}) *[]connectionmo
 		}
 
 		if coverageLevel := v["coverage_level"]; coverageLevel != "" {
-			result.CoverageLevel = pointer.To(connectionmonitors.CoverageLevel(coverageLevel.(string)))
+			result.CoverageLevel = pointer.ToEnum[connectionmonitors.CoverageLevel](coverageLevel.(string))
 		}
 
 		excludedItems := v["excluded_ip_addresses"].(*pluginsdk.Set).List()
@@ -684,7 +684,7 @@ func expandNetworkConnectionMonitorEndpoint(input []interface{}) *[]connectionmo
 		}
 
 		if endpointType := v["target_resource_type"]; endpointType != "" {
-			result.Type = pointer.To(connectionmonitors.EndpointType(endpointType.(string)))
+			result.Type = pointer.ToEnum[connectionmonitors.EndpointType](endpointType.(string))
 		}
 
 		results = append(results, result)
@@ -701,7 +701,7 @@ func expandNetworkConnectionMonitorEndpointFilter(input []interface{}) *connecti
 	v := input[0].(map[string]interface{})
 
 	return &connectionmonitors.ConnectionMonitorEndpointFilter{
-		Type:  pointer.To(connectionmonitors.ConnectionMonitorEndpointFilterType(v["type"].(string))),
+		Type:  pointer.ToEnum[connectionmonitors.ConnectionMonitorEndpointFilterType](v["type"].(string)),
 		Items: expandNetworkConnectionMonitorEndpointFilterItem(v["item"].(*pluginsdk.Set).List()),
 	}
 }
@@ -717,7 +717,7 @@ func expandNetworkConnectionMonitorEndpointFilterItem(input []interface{}) *[]co
 		v := item.(map[string]interface{})
 
 		result := connectionmonitors.ConnectionMonitorEndpointFilterItem{
-			Type: pointer.To(connectionmonitors.ConnectionMonitorEndpointFilterItemType(v["type"].(string))),
+			Type: pointer.ToEnum[connectionmonitors.ConnectionMonitorEndpointFilterItemType](v["type"].(string)),
 		}
 
 		if address := v["address"]; address != "" {
@@ -747,7 +747,7 @@ func expandNetworkConnectionMonitorTestConfiguration(input []interface{}) *[]con
 		}
 
 		if preferredIPVersion := v["preferred_ip_version"]; preferredIPVersion != "" {
-			result.PreferredIPVersion = pointer.To(connectionmonitors.PreferredIPVersion(preferredIPVersion.(string)))
+			result.PreferredIPVersion = pointer.ToEnum[connectionmonitors.PreferredIPVersion](preferredIPVersion.(string))
 		}
 
 		results = append(results, result)
@@ -764,7 +764,7 @@ func expandNetworkConnectionMonitorHTTPConfiguration(input []interface{}) *conne
 	v := input[0].(map[string]interface{})
 
 	props := &connectionmonitors.ConnectionMonitorHTTPConfiguration{
-		Method:         pointer.To(connectionmonitors.HTTPConfigurationMethod(v["method"].(string))),
+		Method:         pointer.ToEnum[connectionmonitors.HTTPConfigurationMethod](v["method"].(string)),
 		PreferHTTPS:    pointer.To(v["prefer_https"].(bool)),
 		RequestHeaders: expandNetworkConnectionMonitorHTTPHeader(v["request_header"].(*pluginsdk.Set).List()),
 	}
@@ -797,7 +797,7 @@ func expandNetworkConnectionMonitorTCPConfiguration(input []interface{}) *connec
 	}
 
 	if destinationPortBehavior := v["destination_port_behavior"].(string); destinationPortBehavior != "" {
-		result.DestinationPortBehavior = pointer.To(connectionmonitors.DestinationPortBehavior(destinationPortBehavior))
+		result.DestinationPortBehavior = pointer.ToEnum[connectionmonitors.DestinationPortBehavior](destinationPortBehavior)
 	}
 
 	return result

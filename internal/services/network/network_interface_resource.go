@@ -250,11 +250,11 @@ func resourceNetworkInterfaceCreate(d *pluginsdk.ResourceData, meta interface{})
 	defer locks.UnlockByName(id.NetworkInterfaceName, networkInterfaceResourceName)
 
 	if auxiliaryMode, hasAuxiliaryMode := d.GetOk("auxiliary_mode"); hasAuxiliaryMode {
-		properties.AuxiliaryMode = pointer.To(networkinterfaces.NetworkInterfaceAuxiliaryMode(auxiliaryMode.(string)))
+		properties.AuxiliaryMode = pointer.ToEnum[networkinterfaces.NetworkInterfaceAuxiliaryMode](auxiliaryMode.(string))
 	}
 
 	if auxiliarySku, hasAuxiliarySku := d.GetOk("auxiliary_sku"); hasAuxiliarySku {
-		properties.AuxiliarySku = pointer.To(networkinterfaces.NetworkInterfaceAuxiliarySku(auxiliarySku.(string)))
+		properties.AuxiliarySku = pointer.ToEnum[networkinterfaces.NetworkInterfaceAuxiliarySku](auxiliarySku.(string))
 	}
 
 	dns, hasDns := d.GetOk("dns_servers")
@@ -354,7 +354,7 @@ func resourceNetworkInterfaceUpdate(d *pluginsdk.ResourceData, meta interface{})
 	if d.HasChange("auxiliary_mode") {
 		propsOtherThanTagsUpdated = true
 		if auxiliaryMode := d.Get("auxiliary_mode").(string); auxiliaryMode != "" {
-			payload.Properties.AuxiliaryMode = pointer.To(networkinterfaces.NetworkInterfaceAuxiliaryMode(auxiliaryMode))
+			payload.Properties.AuxiliaryMode = pointer.ToEnum[networkinterfaces.NetworkInterfaceAuxiliaryMode](auxiliaryMode)
 		} else {
 			payload.Properties.AuxiliaryMode = nil
 		}
@@ -363,7 +363,7 @@ func resourceNetworkInterfaceUpdate(d *pluginsdk.ResourceData, meta interface{})
 	if d.HasChange("auxiliary_sku") {
 		propsOtherThanTagsUpdated = true
 		if auxiliarySku := d.Get("auxiliary_sku").(string); auxiliarySku != "" {
-			payload.Properties.AuxiliarySku = pointer.To(networkinterfaces.NetworkInterfaceAuxiliarySku(auxiliarySku))
+			payload.Properties.AuxiliarySku = pointer.ToEnum[networkinterfaces.NetworkInterfaceAuxiliarySku](auxiliarySku)
 		} else {
 			payload.Properties.AuxiliarySku = nil
 		}
