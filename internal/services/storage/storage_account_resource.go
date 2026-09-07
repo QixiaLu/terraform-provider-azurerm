@@ -2763,9 +2763,8 @@ func flattenAccountBlobContainerDeleteRetentionPolicy(input *blobservices.Delete
 }
 
 func expandAccountBlobPropertiesRestorePolicy(input []interface{}) *blobservices.RestorePolicyProperties {
-	result := blobservices.RestorePolicyProperties{}
 	if len(input) == 0 || input[0] == nil {
-		return &result
+		return pointer.To(blobservices.RestorePolicyProperties{})
 	}
 
 	policy := input[0].(map[string]interface{})
